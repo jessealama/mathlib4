@@ -70,26 +70,26 @@ open CategoryTheory Limits HomologicalComplex Module
     Faces have dimensions from 0 (vertices) to dim (top-dimensional faces). -/
 structure Polyhedron (α : Type) [Fintype α] where
   /-- Face dimension function from 0 to dim -/
-  faceDim : α → ℤ
+  face_dim : α → ℤ
   /-- The topological dimension. For a 2-sphere (surface of 3D polyhedron), dim = 2. -/
   dim : ℕ
 
   -- Dimension constraints
   /-- All faces have dimension between 0 and dim -/
-  dim_range : ∀ f : α, 0 ≤ faceDim f ∧ faceDim f ≤ dim
+  dim_range : ∀ f : α, 0 ≤ face_dim f ∧ face_dim f ≤ dim
   /-- There exists at least one face of each dimension from 0 to dim -/
-  dim_surjective : ∀ k : ℤ, 0 ≤ k ∧ k ≤ dim → ∃ f : α, faceDim f = k
+  dim_surjective : ∀ k : ℤ, 0 ≤ k ∧ k ≤ dim → ∃ f : α, face_dim f = k
 
   /-- Incidence relation between faces -/
   incident : α → α → Bool
   /-- Incidence only occurs between adjacent dimensions -/
-  incident_dims : ∀ f g : α, incident f g → (faceDim g = faceDim f + 1)
+  incident_dims : ∀ f g : α, incident f g → (face_dim g = face_dim f + 1)
 
   /-- Each edge (1-dimensional face) is incident to exactly 2 vertices -/
-  edge_vertex_count : ∀ e : α, faceDim e = 1 →
-    ∃ (v1 v2 : α), faceDim v1 = 0 ∧ faceDim v2 = 0 ∧
+  edge_vertex_count : ∀ e : α, face_dim e = 1 →
+    ∃ (v1 v2 : α), face_dim v1 = 0 ∧ face_dim v2 = 0 ∧
       incident v1 e ∧ incident v2 e ∧ v1 ≠ v2 ∧
-      (∀ v : α, faceDim v = 0 → incident v e → (v = v1 ∨ v = v2))
+      (∀ v : α, face_dim v = 0 → incident v e → (v = v1 ∨ v = v2))
 
 namespace Polyhedron
 
@@ -104,13 +104,13 @@ variable {α : Type} [Fintype α] (P : Polyhedron α)
 
 /-- Face count for dimension k (now works with ℤ dimensions) -/
 def faceCount (P : Polyhedron α) (k : ℤ) : ℕ :=
-  Fintype.card { f : α // P.faceDim f = k }
+  Fintype.card { f : α // P.face_dim f = k }
 
 open CategoryTheory
 
 /-- Type representing k-dimensional chains (functions supported on k-faces) -/
 def kChains (P : Polyhedron α) (k : ℤ) : Type :=
-  { f : α // P.faceDim f = k } → ZMod 2
+  { f : α // P.face_dim f = k } → ZMod 2
 
 /-- AddCommGroup structure for k-dimensional chains -/
 instance (P : Polyhedron α) (k : ℤ) : AddCommGroup (kChains P k) :=
@@ -151,7 +151,7 @@ noncomputable def boundary (P : Polyhedron α) (k : ℤ) :
     kChains P k →ₗ[ZMod 2] kChains P (k - 1) where
   toFun := fun chain => fun ⟨g, hg⟩ =>
     -- Sum over all k-faces incident to g (a (k-1)-face)
-    Finset.sum Finset.univ fun f : { f : α // P.faceDim f = k } =>
+    Finset.sum Finset.univ fun f : { f : α // P.face_dim f = k } =>
       if P.incident g f.val then chain f else 0
   map_add' := fun x y => by
     -- The boundary operator is linear
@@ -159,7 +159,7 @@ noncomputable def boundary (P : Polyhedron α) (k : ℤ) :
     -- Simplify by unfolding the definition
     dsimp only
     -- Use the fact that the sum of if-then-else can be split
-    have h : ∀ (f : { f : α // P.faceDim f = k }),
+    have h : ∀ (f : { f : α // P.face_dim f = k }),
       (if P.incident g f.val then (x + y) f else 0) =
       (if P.incident g f.val then x f else 0) +
       (if P.incident g f.val then y f else 0) := by
@@ -181,7 +181,7 @@ noncomputable def boundary (P : Polyhedron α) (k : ℤ) :
     dsimp only
     simp only [RingHom.id_apply]
     -- Use the fact that scalar multiplication distributes through if-then-else
-    have h : ∀ (f : { f : α // P.faceDim f = k }),
+    have h : ∀ (f : { f : α // P.face_dim f = k }),
       (if P.incident g f.val then (r • x) f else 0) =
       r • (if P.incident g f.val then x f else 0) := by
       intro f
@@ -261,7 +261,7 @@ lemma moduleCat_boundary_comp_eq_zero (GP : GeometricPolyhedron α) (i j k : ℤ
     rfl
 
   -- Apply to our specific y with type cast
-  specialize h_apply (eq3 ▸ y : { f // GP.faceDim f = i - 1 - 1 })
+  specialize h_apply (eq3 ▸ y : { f // GP.face_dim f = i - 1 - 1 })
 
   -- The casted boundaries compute the same as uncasted with index adjustment
   -- The goal has casts that align: eq1 changes i-1 to j, eq2 changes j-1 to k
@@ -375,7 +375,7 @@ noncomputable def toChainComplex (GP : GeometricPolyhedron α) :
 
     -- Now y has the right type after substitution
     -- We can apply h to get the zero result
-    specialize h (eq3 ▸ y : { f // GP.faceDim f = i - 1 - 1 })
+    specialize h (eq3 ▸ y : { f // GP.face_dim f = i - 1 - 1 })
 
     -- The goal involves casts that essentially become identity after index adjustment
     -- The casted boundaries are equal to the uncasted ones after accounting for indices
@@ -423,7 +423,7 @@ noncomputable def toChainComplex (GP : GeometricPolyhedron α) :
 
 /-- A polyhedron has spherical homology if it has the homology of a sphere:
     H_0 = 1 (connected), H_dim = 1 (encloses a region), and H_k = 0 for all other k -/
-def hasSphericalHomology (GP : GeometricPolyhedron α) [DecidableEq α] : Prop :=
+def hasSphericalHomology (GP : GeometricPolyhedron α) : Prop :=
   -- H_0 = 1 (connected)
   Module.finrank (ZMod 2) ((toChainComplex GP).homology 0) = 1 ∧
   -- H_dim = 1 (the polyhedron encloses a region)
@@ -433,14 +433,15 @@ def hasSphericalHomology (GP : GeometricPolyhedron α) [DecidableEq α] : Prop :
     Module.finrank (ZMod 2) ((toChainComplex GP).homology k) = 0
 
 -- Keep the old name as an alias for compatibility
+/-- Alias for `hasSphericalHomology` for backward compatibility. -/
 abbrev isAcyclic := @hasSphericalHomology
 
 /-- The dimension of k-chains equals the number of k-faces.
     This is the fundamental connection: functions from k-faces to ZMod 2
     form a vector space of dimension equal to the cardinality of k-faces. -/
 lemma kChains_finrank (P : Polyhedron α) (k : ℤ) :
-    Module.finrank (ZMod 2) (kChains P k) = Fintype.card { f : α // P.faceDim f = k } := by
-  -- kChains P k is definitionally { f : α // P.faceDim f = k } → ZMod 2
+    Module.finrank (ZMod 2) (kChains P k) = Fintype.card { f : α // P.face_dim f = k } := by
+  -- kChains P k is definitionally { f : α // P.face_dim f = k } → ZMod 2
   unfold kChains
   -- Apply the standard result: finrank(S → K) = |S| for finite S and field K
   exact Module.finrank_pi (ZMod 2)
@@ -457,10 +458,10 @@ instance (GP : GeometricPolyhedron α) (i : ℕ) :
 instance (GP : GeometricPolyhedron α) (i : ℤ) :
     Module.Finite (ZMod 2) ((toChainComplex GP).X i) := by
   -- The chain complex at position i is ModuleCat.of (ZMod 2) (kChains GP.toPolyhedron i)
-  -- where kChains P i = { f : α // P.faceDim f = i } → ZMod 2
+  -- where kChains P i = { f : α // P.face_dim f = i } → ZMod 2
   -- This is finite because:
   -- 1. α has Fintype (finite number of faces)
-  -- 2. { f : α // P.faceDim f = i } is a subtype of α, hence finite
+  -- 2. { f : α // P.face_dim f = i } is a subtype of α, hence finite
   -- 3. Functions from a finite type to ZMod 2 form a finite module
 
   -- Unfold the definition of toChainComplex.X
@@ -470,28 +471,28 @@ instance (GP : GeometricPolyhedron α) (i : ℤ) :
   infer_instance
 
 /-- Face dimensions are always at least 0 -/
-lemma faceDim_ge_zero (GP : GeometricPolyhedron α) (f : α) :
-    GP.toPolyhedron.faceDim f ≥ 0 := by
+lemma face_dim_nonneg (GP : GeometricPolyhedron α) (f : α) :
+    GP.toPolyhedron.face_dim f ≥ 0 := by
   exact (GP.toPolyhedron.dim_range f).1
 
 /-- Face dimensions are at most the polyhedron dimension -/
-lemma faceDim_le_dim (GP : GeometricPolyhedron α) (f : α) :
-    GP.toPolyhedron.faceDim f ≤ GP.dim := by
+lemma face_dim_le_dim (GP : GeometricPolyhedron α) (f : α) :
+    GP.toPolyhedron.face_dim f ≤ GP.dim := by
   exact (GP.toPolyhedron.dim_range f).2
 
 /-- When the index type is empty, there is exactly one element: zero -/
 lemma kChains_unique_of_isEmpty (P : Polyhedron α) (k : ℤ)
-    (h : IsEmpty { f : α // P.faceDim f = k }) :
+    (h : IsEmpty { f : α // P.face_dim f = k }) :
     ∀ (f : kChains P k), f = 0 := by
   intro f
   -- f is a function from an empty type, which must be the empty function
   funext x
-  -- x : { f : α // P.faceDim f = k }, but this type is empty
+  -- x : { f : α // P.face_dim f = k }, but this type is empty
   exact (h.false x).elim
 
 /-- When the index type is empty, the chain space is trivial -/
 lemma kChains_isZero_of_isEmpty (P : Polyhedron α) (k : ℤ)
-    (h : IsEmpty { f : α // P.faceDim f = k }) :
+    (h : IsEmpty { f : α // P.face_dim f = k }) :
     IsZero (ModuleCat.of (ZMod 2) (kChains P k)) := by
   -- Every element is 0 by kChains_unique_of_isEmpty
   have h0 : ∀ (x : kChains P k), x = 0 := kChains_unique_of_isEmpty P k h
@@ -506,10 +507,10 @@ lemma kChains_isZero_of_isEmpty (P : Polyhedron α) (k : ℤ)
 
 /-- When there are no faces of dimension k, the chain space is trivial -/
 lemma kChains_isZero_of_no_faces (P : Polyhedron α) (k : ℤ)
-    (h : ∀ f : α, P.faceDim f ≠ k) :
+    (h : ∀ f : α, P.face_dim f ≠ k) :
     IsZero (ModuleCat.of (ZMod 2) (kChains P k)) := by
-  -- The type { f : α // P.faceDim f = k } is empty
-  have h_empty : IsEmpty { f : α // P.faceDim f = k } := by
+  -- The type { f : α // P.face_dim f = k } is empty
+  have h_empty : IsEmpty { f : α // P.face_dim f = k } := by
     constructor
     intro ⟨f, hf⟩
     exact h f hf
@@ -522,7 +523,7 @@ lemma chainComplex_isZero_below (GP : GeometricPolyhedron α) (k : ℤ) (hk : k 
   apply kChains_isZero_of_no_faces
   intro f hf
   -- By definition, face dimensions are at least 0
-  have : GP.toPolyhedron.faceDim f ≥ 0 := faceDim_ge_zero GP f
+  have : GP.toPolyhedron.face_dim f ≥ 0 := face_dim_nonneg GP f
   omega
 
 /-- The chain complex is zero for dimensions above dim -/
@@ -533,11 +534,11 @@ lemma chainComplex_isZero_above (GP : GeometricPolyhedron α) (k : ℤ)
   apply kChains_isZero_of_no_faces
   intro f hf
   -- By definition, face dimensions are at most dim
-  have : GP.toPolyhedron.faceDim f ≤ GP.dim := faceDim_le_dim GP f
+  have : GP.toPolyhedron.face_dim f ≤ GP.dim := face_dim_le_dim GP f
   omega
 
 /-- The chain complex has zero rank for negative dimensions -/
-lemma chainComplex_finrank_zero_negative (GP : GeometricPolyhedron α) (k : ℤ) (hk : k < 0) :
+lemma chainComplex_finrank_eq_zero_of_neg (GP : GeometricPolyhedron α) (k : ℤ) (hk : k < 0) :
     Module.finrank (ZMod 2) ((toChainComplex GP).X k) = 0 := by
   -- The chain complex is zero for k < 0 (no faces below dimension 0)
   have h_iso : IsZero ((toChainComplex GP).X k) := chainComplex_isZero_below GP k hk
@@ -551,7 +552,8 @@ lemma chainComplex_finrank_zero_negative (GP : GeometricPolyhedron α) (k : ℤ)
   exact Module.finrank_eq_zero_of_rank_eq_zero h_rank
 
 /-- The chain complex has zero rank above the polyhedron dimension -/
-lemma chainComplex_finrank_zero_above (GP : GeometricPolyhedron α) (k : ℤ) (hk : k > GP.dim) :
+lemma chainComplex_finrank_eq_zero_of_gt_dim (GP : GeometricPolyhedron α) (k : ℤ)
+    (hk : k > GP.dim) :
     Module.finrank (ZMod 2) ((toChainComplex GP).X k) = 0 := by
   -- The chain complex is zero for k > dim
   have h_iso : IsZero ((toChainComplex GP).X k) := chainComplex_isZero_above GP k hk
@@ -629,7 +631,7 @@ lemma homology_finrank_zero_of_chain_finrank_zero (C : ChainComplex (ModuleCat (
   exact this
 
 /-- The homology at dimension 0 is 1-dimensional (connected component) -/
-lemma homology_at_zero_dim (GP : GeometricPolyhedron α) [DecidableEq α]
+lemma homology_finrank_eq_one_at_zero_of_spherical (GP : GeometricPolyhedron α)
     (hsphere : hasSphericalHomology GP) :
     Module.finrank (ZMod 2) ((toChainComplex GP).homology 0) = 1 := by
   -- This is part of the definition of spherical homology
@@ -637,29 +639,29 @@ lemma homology_at_zero_dim (GP : GeometricPolyhedron α) [DecidableEq α]
 
 /-- The homology at the top dimension is 1-dimensional for polyhedra with spherical homology.
     This represents the fact that the polyhedron encloses a region. -/
-lemma homology_at_top_dim (GP : GeometricPolyhedron α) [DecidableEq α]
+lemma homology_finrank_eq_one_at_dim_of_spherical (GP : GeometricPolyhedron α)
     (hsphere : hasSphericalHomology GP) :
     Module.finrank (ZMod 2) ((toChainComplex GP).homology GP.dim) = 1 := by
   -- This is part of the definition of spherical homology
   exact hsphere.2.1
 
 /-- Homology vanishes for negative dimensions -/
-lemma homology_zero_negative (GP : GeometricPolyhedron α) [DecidableEq α]
+lemma homology_finrank_eq_zero_of_neg (GP : GeometricPolyhedron α)
     (k : ℤ) (hk : k < 0) :
     Module.finrank (ZMod 2) ((toChainComplex GP).homology k) = 0 := by
   -- For k < 0, the chain complex is zero since we have no faces below dimension 0
   have h_chain : Module.finrank (ZMod 2) ((toChainComplex GP).X k) = 0 :=
-    chainComplex_finrank_zero_negative GP k hk
+    chainComplex_finrank_eq_zero_of_neg GP k hk
   haveI : (toChainComplex GP).HasHomology k := inferInstance
   exact homology_finrank_zero_of_chain_finrank_zero (toChainComplex GP) k h_chain
 
 /-- For an acyclic complex, homology vanishes for dimensions above GP.dim -/
-lemma homology_zero_above_dim (GP : GeometricPolyhedron α) [DecidableEq α]
+lemma homology_finrank_eq_zero_of_gt_dim (GP : GeometricPolyhedron α)
     (k : ℤ) (hk : k > GP.dim) :
     Module.finrank (ZMod 2) ((toChainComplex GP).homology k) = 0 := by
   -- For k > dim, the chain complex has finrank 0
   have h_chain : Module.finrank (ZMod 2) ((toChainComplex GP).X k) = 0 :=
-    chainComplex_finrank_zero_above GP k hk
+    chainComplex_finrank_eq_zero_of_gt_dim GP k hk
   -- Therefore homology also has finrank 0
   haveI : (toChainComplex GP).HasHomology k := inferInstance
   exact homology_finrank_zero_of_chain_finrank_zero (toChainComplex GP) k h_chain
@@ -800,13 +802,13 @@ lemma chainComplex_finrank_zero_outside (GP : GeometricPolyhedron α) (k : ℤ)
   cases hk with
   | inl h =>
     -- k < 0
-    exact chainComplex_finrank_zero_negative GP k (by omega)
+    exact chainComplex_finrank_eq_zero_of_neg GP k (by omega)
   | inr h =>
     -- k > dim
-    exact chainComplex_finrank_zero_above GP k (by omega)
+    exact chainComplex_finrank_eq_zero_of_gt_dim GP k (by omega)
 
 /-- The chain complex has finite support: only non-zero in [0, dim] -/
-lemma chain_finite_support (GP : GeometricPolyhedron α) [DecidableEq α] :
+lemma chain_finite_support (GP : GeometricPolyhedron α) :
     {i : ℤ | Module.finrank (ZMod 2) ((toChainComplex GP).X i) ≠ 0}.Finite := by
   -- The chain complex is only non-zero for i ∈ [0, dim]
   apply Set.Finite.subset (Finset.finite_toSet (Finset.Ico (0 : ℤ) ((GP.dim : ℤ) + 1)))
@@ -822,7 +824,7 @@ lemma chain_finite_support (GP : GeometricPolyhedron α) [DecidableEq α] :
   exact hi this
 
 /-- The homology has finite support for polyhedra with spherical homology -/
-lemma homology_finite_support (GP : GeometricPolyhedron α) [DecidableEq α]
+lemma homology_finite_support (GP : GeometricPolyhedron α)
     (hsphere : hasSphericalHomology GP) :
     {i : ℤ | Module.finrank (ZMod 2) ((toChainComplex GP).homology i) ≠ 0}.Finite := by
   -- For spherical homology, by definition of hasSphericalHomology:
@@ -847,7 +849,7 @@ lemma homology_finite_support (GP : GeometricPolyhedron α) [DecidableEq α]
   exact hsphere.2.2 i h0 hdim
 
 /-- The Euler characteristic of the chain complex equals the alternating sum of face counts -/
-theorem chain_euler_char_eq_face_sum (GP : GeometricPolyhedron α) [DecidableEq α] :
+theorem chain_euler_char_eq_face_sum (GP : GeometricPolyhedron α) :
     ChainComplex.eulerChar (toChainComplex GP) =
     ∑ k ∈ Finset.range (GP.dim + 1), (-1 : ℤ)^k * (faceCount GP.toPolyhedron k : ℤ) := by
   -- The chain complex modules at degree k have rank equal to face count at k
@@ -927,7 +929,7 @@ theorem chain_euler_char_eq_face_sum (GP : GeometricPolyhedron α) [DecidableEq 
     congr 1
     rw [Int.natAbs_of_nonneg hi_nonneg]
 
-theorem spherical_euler_char (GP : GeometricPolyhedron α) [DecidableEq α]
+theorem eulerChar_eq_one_add_neg_one_pow_dim_of_spherical (GP : GeometricPolyhedron α)
     (hdim : 0 < GP.dim) (hsphere : hasSphericalHomology GP) :
     ChainComplex.eulerChar (toChainComplex GP) = 1 + (-1 : ℤ)^GP.dim := by
   -- First establish that we have homology at all degrees
@@ -936,13 +938,53 @@ theorem spherical_euler_char (GP : GeometricPolyhedron α) [DecidableEq α]
   -- Step 1: Start with the infinite Euler characteristic
   calc ChainComplex.eulerChar (toChainComplex GP)
 
-    -- Step 2: Apply Euler-Poincaré formula (infinite version)
+    -- Step 2: Apply Euler-Poincaré formula (bounded version)
+    -- We'll use the bounded formula since we know both chain and homology have finite support
     = ChainComplex.homologyEulerChar (toChainComplex GP) := by {
-      apply ChainComplex.eulerChar_eq_homologyEulerChar
-      · -- Chains have finite support
-        exact chain_finite_support GP
-      · -- Homology has finite support
-        exact homology_finite_support GP hsphere
+      -- Convert to bounded sums since support is finite
+      have chain_supp := chain_finite_support GP
+      have homology_supp := homology_finite_support GP hsphere
+
+      -- The chain complex is supported on [0, dim]
+      let indices := Finset.Ico (0 : ℤ) ((GP.dim : ℤ) + 1)
+
+      -- Convert infinite sum to bounded sum for chains
+      have hc : ChainComplex.eulerChar (toChainComplex GP) =
+                ChainComplex.boundedEulerChar (toChainComplex GP) indices := by
+        apply ChainComplex.eulerChar_eq_boundedEulerChar
+        exact chainComplex_finrank_zero_outside GP
+
+      -- Convert infinite sum to bounded sum for homology
+      have hh : ChainComplex.homologyEulerChar (toChainComplex GP) =
+                ChainComplex.homologyBoundedEulerChar (toChainComplex GP) indices := by
+        apply ChainComplex.homologyEulerChar_eq_homologyBoundedEulerChar
+        intro i hi
+        -- hi says i ∉ Finset.Ico 0 (GP.dim + 1)
+        -- This means either i < 0 or i >= GP.dim + 1
+        -- No simp needed, hi already has the right form
+        by_cases h : i < 0
+        · exact homology_finrank_eq_zero_of_neg GP i h
+        · -- i ≥ 0 but i ∉ [0, GP.dim + 1), so i ≥ GP.dim + 1
+          push_neg at h
+          have : i ≥ (GP.dim : ℤ) + 1 := by
+            by_contra h_not
+            push_neg at h_not
+            have : i ∈ Finset.Ico (0 : ℤ) ((GP.dim : ℤ) + 1) := by
+              simp [Finset.mem_Ico, h, h_not]
+            exact hi this
+          have : i > GP.dim := by omega
+          exact homology_finrank_eq_zero_of_gt_dim GP i this
+
+      -- Now apply the bounded Euler-Poincaré theorem
+      rw [hc, hh]
+      apply ChainComplex.eulerChar_eq_homology_eulerChar
+      · omega  -- a ≤ b where a = 0, b = dim
+      · intro i hi
+        have : IsZero ((toChainComplex GP).X i) := chainComplex_isZero_below GP i hi
+        exact this
+      · intro i hi
+        have : IsZero ((toChainComplex GP).X i) := chainComplex_isZero_above GP i hi
+        exact this
     }
 
     -- Step 3: Convert infinite sum to bounded sum over [0, dim]
@@ -957,12 +999,12 @@ theorem spherical_euler_char (GP : GeometricPolyhedron α) [DecidableEq α]
       | inl h_low =>
         -- ¬(0 ≤ i) means i < 0
         simp only [not_le] at h_low
-        exact homology_zero_negative GP i h_low
+        exact homology_finrank_eq_zero_of_neg GP i h_low
       | inr h_high =>
         -- ¬(i < dim + 1) means i ≥ dim + 1, so i > dim
         simp only [not_lt] at h_high
         have : i > GP.dim := by omega
-        exact homology_zero_above_dim GP i this
+        exact homology_finrank_eq_zero_of_gt_dim GP i this
 
     -- Step 4: Expand the bounded sum and split into three parts
     _ = (∑ i ∈ Finset.Ico (0 : ℤ) ((GP.dim : ℤ) + 1),
@@ -1001,7 +1043,8 @@ theorem spherical_euler_char (GP : GeometricPolyhedron α) [DecidableEq α]
 
     -- Step 7: Apply H_0 = 1 and H_dim = 1 (all others are 0)
     _ = 1 + 0 + (-1 : ℤ)^GP.dim * 1 := by
-      rw [homology_at_zero_dim GP hsphere, homology_at_top_dim GP hsphere]
+      rw [homology_finrank_eq_one_at_zero_of_spherical GP hsphere,
+          homology_finrank_eq_one_at_dim_of_spherical GP hsphere]
       simp
 
     -- Step 8: Simplify

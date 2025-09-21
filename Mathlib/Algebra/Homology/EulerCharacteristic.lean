@@ -90,16 +90,6 @@ theorem homologyEulerChar_eq_homologyBoundedEulerChar (C : ChainComplex (ModuleC
     simp [h_zero i hi]
   rw [tsum_eq_sum h_support]
 
-/-- The infinite Euler-Poincaré theorem: For chain complexes where both the chains
-and homology have finite support, the Euler characteristic equals the homology
-Euler characteristic. -/
-theorem eulerChar_eq_homologyEulerChar (C : ChainComplex (ModuleCat R) ℤ)
-    [∀ i : ℤ, C.HasHomology i]
-    (h_chain_support : {i : ℤ | Module.finrank R (C.X i) ≠ 0}.Finite)
-    (h_homology_support : {i : ℤ | Module.finrank R (C.homology i) ≠ 0}.Finite) :
-    eulerChar C = homologyEulerChar C := by
-  sorry  -- This requires the telescoping sum argument
-
 end InfiniteSums
 
 end ChainComplex
