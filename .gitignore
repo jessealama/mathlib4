@@ -4,3 +4,5 @@
 .cache
 # `lake` stores its files here:
 .lake
+# MCP configuration file:
+.mcp.json

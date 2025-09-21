@@ -7,6 +7,10 @@ import Mathlib.Algebra.Homology.ComplexShape
 import Mathlib.CategoryTheory.Subobject.Limits
 import Mathlib.CategoryTheory.GradedObject
 import Mathlib.Algebra.Homology.ShortComplex.Basic
+import Mathlib.Algebra.Category.ModuleCat.Basic
+import Mathlib.LinearAlgebra.Dimension.Finrank
+import Mathlib.Data.ZMod.Basic
+import Mathlib.CategoryTheory.Limits.Shapes.ZeroMorphisms
 
 /-!
 # Homological complexes.
@@ -1013,3 +1017,21 @@ theorem mkHom_f_succ_succ (n : ℕ) :
 end MkHom
 
 end CochainComplex
+
+section ChainComplexEulerChar
+-- Additional chain complex results contributed during the formalization of Euler's
+-- polyhedron formula
+
+open CategoryTheory Limits
+
+-- Instance needed for chain complexes over ZMod 2
+instance : HasZeroMorphisms (ModuleCat (ZMod 2)) := inferInstance
+
+-- Instances for ModuleCat objects to work with Module functions
+instance (C : ChainComplex (ModuleCat (ZMod 2)) ℕ) (i : ℕ) : AddCommGroup (C.X i) :=
+  (C.X i).isAddCommGroup
+
+instance (C : ChainComplex (ModuleCat (ZMod 2)) ℕ) (i : ℕ) : Module (ZMod 2) (C.X i) :=
+  (C.X i).isModule
+
+end ChainComplexEulerChar
