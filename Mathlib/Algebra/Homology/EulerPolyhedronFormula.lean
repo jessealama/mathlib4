@@ -20,4 +20,3 @@ polyhedron with spherical homology of dimension d, the Euler characteristic equa
 This is a general homological result that underlies the classical Euler polyhedron formula
 V - E + F = 2 for convex polyhedra.
 -/
-
