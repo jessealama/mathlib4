@@ -436,6 +436,10 @@ instance (GP : GeometricPolyhedron α) (i : ℤ) :
   simp only [toChainComplex]
   infer_instance
 
+-- The chain complex has homology at every index
+instance (GP : GeometricPolyhedron α) (i : ℤ) :
+    (toChainComplex GP).HasHomology i := inferInstance
+
 /-- Face dimensions are always at least 0 -/
 lemma face_dim_nonneg (GP : GeometricPolyhedron α) (f : α) :
     GP.toPolyhedron.face_dim f ≥ 0 := by
@@ -571,7 +575,6 @@ lemma homology_finrank_eq_zero_of_neg (GP : GeometricPolyhedron α)
     Module.finrank (ZMod 2) ((toChainComplex GP).homology k) = 0 := by
   have h_chain : Module.finrank (ZMod 2) ((toChainComplex GP).X k) = 0 :=
     chainComplex_finrank_eq_zero_of_neg GP k hk
-  haveI : (toChainComplex GP).HasHomology k := inferInstance
   exact homology_finrank_zero_of_chain_finrank_zero (toChainComplex GP) k h_chain
 
 /-- Homology vanishes for dimensions above GP.dim -/
@@ -580,7 +583,6 @@ lemma homology_finrank_eq_zero_of_gt_dim (GP : GeometricPolyhedron α)
     Module.finrank (ZMod 2) ((toChainComplex GP).homology k) = 0 := by
   have h_chain : Module.finrank (ZMod 2) ((toChainComplex GP).X k) = 0 :=
     chainComplex_finrank_eq_zero_of_gt_dim GP k hk
-  haveI : (toChainComplex GP).HasHomology k := inferInstance
   exact homology_finrank_zero_of_chain_finrank_zero (toChainComplex GP) k h_chain
 
 /-- General lemma for splitting Finset.Ico sums with at least 3 elements -/
@@ -806,8 +808,6 @@ theorem chain_euler_char_eq_face_sum (GP : GeometricPolyhedron α) :
 theorem eulerChar_eq_one_add_neg_one_pow_dim_of_spherical (GP : GeometricPolyhedron α)
     (hdim : 0 < GP.dim) (hsphere : hasSphericalHomology GP) :
     ChainComplex.eulerChar (toChainComplex GP) = 1 + (-1 : ℤ)^GP.dim := by
-  haveI : ∀ i : ℤ, (toChainComplex GP).HasHomology i := fun i => inferInstance
-
   calc ChainComplex.eulerChar (toChainComplex GP)
 
     -- Step 2: Apply Euler-Poincaré formula
