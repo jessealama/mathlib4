@@ -180,12 +180,6 @@ noncomputable def boundary (P : Polyhedron α) (k : ℤ) :
     rw [← Finset.smul_sum]
     rfl
 
-/-- A polyhedron satisfies the chain complex property if ∂ₖ₋₁ ∘ ∂ₖ = 0 for all k.
-    This is a fundamental property of geometric polyhedra: each (k-2)-face is reached
-    from each k-face through an even number of paths. -/
-def HasChainComplexProperty {α : Type} [Fintype α] (P : Polyhedron α) : Prop :=
-  ∀ k : ℤ, (boundary P (k - 1)) ∘ₗ (boundary P k) = 0
-
 /-- A geometric polyhedron is a polyhedron that satisfies the chain complex property.
     This property ensures that the boundary of a boundary is zero (∂² = 0),
     which is a fundamental property of geometric polyhedra: each k-face is reached
@@ -200,82 +194,6 @@ lemma boundary_comp_apply_eq_zero (GP : GeometricPolyhedron α) (i : ℤ)
     (x : kChains GP.toPolyhedron i) :
     boundary GP.toPolyhedron (i - 1) (boundary GP.toPolyhedron i x) = 0 := by
   rw [← LinearMap.comp_apply, GP.boundary_of_boundary_eq_zero i]
-  rfl
-
-/-- The ModuleCat morphism composition preserves the boundary zero property.
-    This lemma bridges between the algebraic boundary property and the categorical morphisms. -/
-lemma moduleCat_boundary_comp_eq_zero (GP : GeometricPolyhedron α) (i j k : ℤ)
-    (hi : i = j + 1) (hj : j = k + 1) :
-    let d_ij : ModuleCat.of (ZMod 2) (kChains GP.toPolyhedron i) ⟶
-               ModuleCat.of (ZMod 2) (kChains GP.toPolyhedron j) :=
-      ModuleCat.ofHom (by
-        have eq : i - 1 = j := by omega
-        exact eq ▸ boundary GP.toPolyhedron i)
-    let d_jk : ModuleCat.of (ZMod 2) (kChains GP.toPolyhedron j) ⟶
-               ModuleCat.of (ZMod 2) (kChains GP.toPolyhedron k) :=
-      ModuleCat.ofHom (by
-        have eq : j - 1 = k := by omega
-        exact eq ▸ boundary GP.toPolyhedron j)
-    d_ij ≫ d_jk = 0 := by
-  -- We need to show the composition of ModuleCat morphisms is zero
-  -- Use extensionality
-  ext x y
-
-  -- Simplify the composition
-  simp only [ModuleCat.hom_comp, ModuleCat.hom_ofHom, ModuleCat.hom_zero,
-             LinearMap.zero_apply]
-
-  -- Now we need to show the composition gives zero
-  simp only [LinearMap.comp_apply]
-
-  -- The key is that boundary ∘ boundary = 0
-  have eq1 : i - 1 = j := by omega
-  have eq2 : j - 1 = k := by omega
-  have eq3 : i - 1 - 1 = k := by omega
-
-  -- Apply the boundary_comp_apply_eq_zero property
-  have h := boundary_comp_apply_eq_zero GP i x
-
-  -- h tells us: boundary (i-1) (boundary i x) = 0 as a function
-  -- We need to apply this to y, but with proper type alignment
-
-  -- Since h shows the function is zero, applying it to any element gives 0
-  have h_apply : ∀ z, (boundary GP.toPolyhedron (i - 1))
-      ((boundary GP.toPolyhedron i) x) z = 0 := by
-    intro z
-    rw [h]
-    rfl
-
-  -- Apply to our specific y with type cast
-  specialize h_apply (eq3 ▸ y : { f // GP.face_dim f = i - 1 - 1 })
-
-  -- The casted boundaries compute the same as uncasted with index adjustment
-  -- The goal has casts that align: eq1 changes i-1 to j, eq2 changes j-1 to k
-
-  -- The goal is about the casted composition, which equals the uncasted after index adjustment
-  -- This is the core mathematical fact: casts preserve the boundary computation
-
-  -- We've shown the uncasted version is 0 (h_apply)
-  -- The casted version must also be 0 because the casts just align indices
-
-  -- Complete the proof by trying different approaches
-  -- Attempt 1: Direct equality via rfl (unlikely but worth trying)
-  -- rfl  -- Doesn't work: types don't match definitionally
-
-  -- Attempt 2: Use convert with minimal unification depth
-  convert h_apply using 1
-
-  -- We need to show the casted boundaries equal the uncasted ones
-  -- The ⋯ notation represents casts that use eq1 and eq2 to align types
-
-  -- The casts on both sides are using the same equalities (eq1, eq2, eq3)
-  -- Let's try substituting them to make the types match
-
-  -- First attempt: use subst to eliminate the equalities
-  -- This would make i-1 literally equal to j, etc.
-  subst eq1 eq2
-
-  -- Now the types should match more directly
   rfl
 
 /-- The chain complex of a geometric polyhedron over ZMod 2 (ℤ-indexed) -/
@@ -396,12 +314,8 @@ noncomputable def toChainComplex (GP : GeometricPolyhedron α) :
     -- Since h shows the RHS is 0, and we know boundary ∘ boundary = 0,
     -- the LHS must also be 0, making them equal
 
-    -- Complete the proof using our lemma about ModuleCat morphism composition
-    -- The lemma handles the cast operations and shows the composition equals zero
-    -- This dramatically simplifies the proof!
-
-    -- Apply the same technique that worked in moduleCat_boundary_comp_eq_zero:
-    -- Use subst to eliminate the index equalities, making the types match
+    -- Complete the proof by using subst to eliminate the index equalities,
+    -- making the types match
     subst eq1 eq2
 
     -- Now the types align and we can use reflexivity
@@ -585,84 +499,7 @@ lemma homology_finrank_eq_zero_of_gt_dim (GP : GeometricPolyhedron α)
     chainComplex_finrank_eq_zero_of_gt_dim GP k hk
   exact homology_finrank_zero_of_chain_finrank_zero (toChainComplex GP) k h_chain
 
-/-- General lemma for splitting Finset.Ico sums with at least 3 elements -/
-lemma Finset.sum_Ico_split_first_last {R : Type*} [AddCommMonoid R] (f : ℤ → R)
-    (a b : ℤ) (h : a + 1 < b) :
-    (∑ i ∈ Finset.Ico a b, f i) =
-    f a + (∑ i ∈ Finset.Ico (a + 1) (b - 1), f i) + f (b - 1) := by
-  have eq1 : Finset.Ico a b = {a} ∪ Finset.Ico (a + 1) b := by
-    ext x
-    simp only [Finset.mem_Ico, Finset.mem_union, Finset.mem_singleton]
-    constructor
-    · intro ⟨ha, hb⟩
-      by_cases h : x = a
-      · left; exact h
-      · right; omega
-    · intro h
-      cases h with
-      | inl h => subst h; omega
-      | inr h => omega
-
-  have eq2 : Finset.Ico (a + 1) b = Finset.Ico (a + 1) (b - 1) ∪ {b - 1} := by
-    ext x
-    simp only [Finset.mem_Ico, Finset.mem_union, Finset.mem_singleton]
-    constructor
-    · intro ⟨ha, hb⟩
-      by_cases h : x = b - 1
-      · right; exact h
-      · left; omega
-    · intro h
-      cases h with
-      | inl h => omega
-      | inr h => subst h; omega
-
-  rw [eq1, Finset.sum_union, Finset.sum_singleton, eq2, Finset.sum_union, Finset.sum_singleton]
-  · simp only [add_assoc]
-  · rw [Finset.disjoint_singleton_right]
-    simp only [Finset.mem_Ico]
-    omega
-  · rw [Finset.disjoint_singleton_left]
-    simp only [Finset.mem_Ico]
-    omega
-
 /-- Splitting a sum over [0, dim+1) into first element, middle elements, and last element -/
-lemma sum_split_first_last {R : Type*} [Ring R] (f : ℕ → R) (dim : ℕ) (hdim : 0 < dim) :
-    (∑ i ∈ Finset.Ico 0 (dim + 1), f i) =
-    f 0 + (∑ i ∈ Finset.Ico 1 dim, f i) + f dim := by
-  have h1 : Finset.Ico 0 (dim + 1) = {0} ∪ Finset.Ico 1 (dim + 1) := by
-    ext x
-    simp only [Finset.mem_Ico, Finset.mem_union, Finset.mem_singleton]
-    constructor
-    · intro ⟨h0, hdim1⟩
-      by_cases hx : x = 0
-      · left; exact hx
-      · right; omega
-    · intro h
-      cases h with
-      | inl h => subst h; omega
-      | inr h => omega
-
-  have h2 : Finset.Ico 1 (dim + 1) = Finset.Ico 1 dim ∪ {dim} := by
-    ext x
-    simp only [Finset.mem_Ico, Finset.mem_union, Finset.mem_singleton]
-    constructor
-    · intro ⟨h1, hdim1⟩
-      by_cases hx : x = dim
-      · right; exact hx
-      · left; omega
-    · intro h
-      cases h with
-      | inl h => omega
-      | inr h => subst h; omega
-
-  rw [h1, Finset.sum_union, Finset.sum_singleton, h2, Finset.sum_union, Finset.sum_singleton]
-  · simp only [add_assoc]
-  · simp only [Finset.disjoint_singleton_right, Finset.mem_Ico]
-    omega
-  · simp only [Finset.disjoint_singleton_left, Finset.mem_Ico]
-    omega
-
-/-- Integer version of sum_split_first_last for use in the main theorem -/
 lemma sum_split_first_last_int {R : Type*} [Ring R] (f : ℤ → R) (dim : ℕ) (hdim : 0 < dim) :
     (∑ i ∈ Finset.Ico (0 : ℤ) ((dim : ℤ) + 1), f i) =
     f 0 + (∑ i ∈ Finset.Ico (1 : ℤ) (dim : ℤ), f i) + f dim := by
