@@ -551,7 +551,6 @@ import Mathlib.Algebra.Homology.Embedding.TruncLEHomology
 import Mathlib.Algebra.Homology.EulerCharacteristic
 import Mathlib.Algebra.Homology.EulerPoincare
 import Mathlib.Algebra.Homology.EulerPolyhedronFormula
-import Mathlib.Algebra.Homology.EulerPolyhedronFormula.Basic
 import Mathlib.Algebra.Homology.ExactSequence
 import Mathlib.Algebra.Homology.Factorizations.Basic
 import Mathlib.Algebra.Homology.Functor
