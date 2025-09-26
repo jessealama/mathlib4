@@ -208,21 +208,6 @@ lemma faceDim_unique (F : Set E) (hF1 hF2 : IsFace P F) :
   -- not dependent on the proof that it's a face
   sorry
 
-/-- Helper: The incidence filter matches the intermediate faces from Diamond property -/
-lemma incidence_filter_eq_intermediate (F : Set E) (H : Set E)
-    (hF : IsFace P F) (hH : IsFace P H)
-    (k : ℤ) [Fintype {G : Set E // G ∈ faces_dim P (k - 1)}]
-    (hF_dim : (faceDim P F hF : ℤ) = k) (hH_dim : (faceDim P H hH : ℤ) = k - 2)
-    (h_subset : H ⊆ F) (intermediate : Finset (Set E))
-    (h_prop : ∀ G ∈ intermediate, IsFace P G ∧ H ⊆ G ∧ G ⊆ F ∧
-              ∃ hG : IsFace P G, faceDim P G hG = faceDim P H hH + 1) :
-    (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
-      incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH).card = intermediate.card := by
-  -- The filtered set and intermediate have the same cardinality
-  -- Both count (k-1)-dimensional faces G with H ⊆ G ⊆ F
-  -- The proof requires showing a bijection between them
-  sorry
-
 /-- The Diamond/Interval Property: For convex polyhedra, any codimension-2 face H contained
     in a face F has exactly 2 intermediate faces between them. This is a fundamental property
     of convex polyhedra that distinguishes them from more general polytopes. -/
@@ -232,6 +217,71 @@ lemma face_interval_card (F : Set E) (H : Set E) (hF : IsFace P F) (hH : IsFace 
       (∀ G ∈ intermediate, IsFace P G ∧ H ⊆ G ∧ G ⊆ F ∧
         ∃ hG : IsFace P G, faceDim P G hG = faceDim P H hH + 1) :=
   sorry
+
+/-- Helper: The incidence filter counts exactly the intermediate faces from Diamond property -/
+lemma incidence_filter_eq_two (F : Set E) (H : Set E)
+    (hF : IsFace P F) (hH : IsFace P H)
+    (k : ℤ) [Fintype {G : Set E // G ∈ faces_dim P (k - 1)}]
+    (hF_dim : (faceDim P F hF : ℤ) = k) (hH_dim : (faceDim P H hH : ℤ) = k - 2)
+    (h_subset : H ⊆ F) (h_codim : faceDim P H hH + 2 = faceDim P F hF) :
+    (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+      incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH).card = 2 := by
+  -- Apply face_interval_card to get the unique set of 2 intermediate faces
+  obtain ⟨intermediate, ⟨h_card, h_prop⟩, h_unique⟩ :=
+    face_interval_card P F H hF hH h_subset h_codim
+
+  -- We need to show our filter has the same cardinality as intermediate
+  -- First, show that G is in our filter iff G.1 is in intermediate
+
+  have filter_eq_intermediate : ∀ G : {G : Set E // G ∈ faces_dim P (k - 1)},
+      (incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH) ↔ G.1 ∈ intermediate := by
+    intro G
+    constructor
+    · -- If G satisfies incidence conditions, then G.1 is in intermediate
+      intro ⟨hFG_inc, hGH_inc⟩
+      rw [incidence_iff_subset] at hFG_inc hGH_inc
+      -- G.1 satisfies all the properties required for intermediate
+      have hG_face : IsFace P G.1 := G.2.1
+      have hG_dim : (faceDim P G.1 hG_face : ℤ) = k - 1 := by
+        obtain ⟨_, hG_dim⟩ := G.2.2
+        exact hG_dim
+      have hG_dim_nat : faceDim P G.1 hG_face = faceDim P H hH + 1 := by
+        have : (faceDim P G.1 hG_face : ℤ) = (faceDim P H hH : ℤ) + 1 := by
+          rw [hG_dim, hH_dim]
+          omega
+        exact Nat.cast_injective this
+
+      -- By uniqueness of intermediate, any face with these properties must be in it
+      -- This uses the uniqueness part of face_interval_card
+      sorry -- Need to extract from the uniqueness condition
+
+    · -- If G.1 is in intermediate, then G satisfies incidence conditions
+      intro hG_inter
+      obtain ⟨hG_face, hG_sub_H, hG_sub_F, hG_face', hG_dim_rel⟩ := h_prop G.1 hG_inter
+      constructor
+      · rw [incidence_iff_subset]
+        have hG_dim : (faceDim P G.1 G.2.1 : ℤ) = k - 1 := by
+          obtain ⟨_, hG_dim⟩ := G.2.2
+          exact hG_dim
+        constructor
+        · exact hG_sub_F
+        · have : faceDim P G.1 G.2.1 + 1 = faceDim P F hF := by
+            have eq1 : (faceDim P G.1 G.2.1 : ℤ) + 1 = k := by
+              rw [hG_dim]
+              omega
+            have eq2 : (faceDim P F hF : ℤ) = k := hF_dim
+            exact Nat.cast_injective (eq1.trans eq2.symm)
+          exact this
+      · rw [incidence_iff_subset]
+        constructor
+        · exact hG_sub_H
+        · rw [← faceDim_unique P G.1 G.2.1 hG_face']
+          exact hG_dim_rel.symm
+
+  -- Now we can show the cardinalities are equal
+  -- The filter contains exactly those G where G.1 ∈ intermediate
+  -- Since intermediate has cardinality 2, so does our filter
+  sorry -- Use filter_eq_intermediate to show the sets have the same cardinality
 
 /-- The count of intermediate (k-1)-faces between a k-face F and (k-2)-face H
     is either 0 or 2 for convex polyhedra -/
@@ -266,16 +316,9 @@ lemma intermediate_face_count_zero_or_two (k : ℤ)
       -- Convert back to natural numbers
       exact Nat.cast_injective this
 
-    -- Apply Diamond property: there are exactly 2 intermediate faces
-    obtain ⟨intermediate, ⟨h_card, h_prop⟩, h_unique⟩ :=
-      face_interval_card P F.1 H hF_face hH_face h_subset h_codim
-
+    -- Apply the helper lemma directly
     use 2, Or.inr rfl
-
-    -- Use the helper lemma to show the counts match
-    rw [incidence_filter_eq_intermediate P F.1 H hF_face hH_face k hF_dim hH_dim
-        h_subset intermediate h_prop]
-    exact h_card
+    exact incidence_filter_eq_two P F.1 H hF_face hH_face k hF_dim hH_dim h_subset h_codim
 
   · -- H ⊄ F: no intermediate faces
     use 0, Or.inl rfl
