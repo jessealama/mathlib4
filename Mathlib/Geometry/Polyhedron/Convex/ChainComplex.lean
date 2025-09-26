@@ -288,7 +288,60 @@ lemma incidence_filter_eq_two (F : Set E) (H : Set E)
   -- Now we can show the cardinalities are equal
   -- The filter contains exactly those G where G.1 ∈ intermediate
   -- Since intermediate has cardinality 2, so does our filter
-  sorry -- Use filter_eq_intermediate to show the sets have the same cardinality
+
+  -- First, let's identify the filtered set
+  let filtered := Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+                    incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH
+
+  -- We need to show filtered.card = intermediate.card
+  -- We'll do this by establishing a bijection
+
+  -- Define the map from filtered to intermediate
+  have map_to_inter : ∀ G ∈ filtered, G.1 ∈ intermediate := by
+    intro G hG
+    rw [Finset.mem_filter] at hG
+    exact (filter_eq_intermediate G).mp hG.2
+
+  -- For surjectivity, we need every element of intermediate to come from some G in filtered
+  have surj : ∀ x ∈ intermediate, ∃ G ∈ filtered, G.1 = x := by
+    intro x hx
+    -- x is a (k-1)-face with the right properties
+    obtain ⟨hx_face, hx_sub_H, hx_sub_F, hx_face', hx_dim⟩ := h_prop x hx
+    -- x must be in faces_dim P (k - 1)
+    have hx_mem : x ∈ faces_dim P (k - 1) := by
+      constructor
+      · exact hx_face
+      · use hx_face
+        have : (faceDim P x hx_face : ℤ) = k - 1 := by
+          have eq : faceDim P x hx_face = faceDim P H hH + 1 := by
+            rw [← faceDim_unique P x hx_face hx_face']
+            exact hx_dim
+          have : (faceDim P x hx_face : ℤ) = (faceDim P H hH : ℤ) + 1 := by
+            simp only [eq, Nat.cast_add, Nat.cast_one]
+          rw [hH_dim] at this
+          omega
+        exact this
+
+    use ⟨x, hx_mem⟩
+    constructor
+    · rw [Finset.mem_filter]
+      exact ⟨Finset.mem_univ _, (filter_eq_intermediate ⟨x, hx_mem⟩).mpr hx⟩
+    · rfl
+
+  -- Now we establish a bijection to show filtered.card = intermediate.card = 2
+  have card_eq : filtered.card = intermediate.card := by
+    apply Finset.card_bij (fun G _ => G.1) map_to_inter
+    · -- Injectivity: if G₁.1 = G₂.1 then G₁ = G₂
+      intro G₁ _ G₂ _ h_eq
+      exact Subtype.ext h_eq
+    · -- Surjectivity
+      intro x hx
+      obtain ⟨G, hG, rfl⟩ := surj x hx
+      exact ⟨G, hG, rfl⟩
+
+  -- Finally, use the fact that intermediate has cardinality 2
+  rw [card_eq]
+  exact h_card
 
 /-- The count of intermediate (k-1)-faces between a k-face F and (k-2)-face H
     is either 0 or 2 for convex polyhedra -/
