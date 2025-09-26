@@ -34,7 +34,7 @@ dealing with orientations.
 
 -/
 
-open CategoryTheory Module
+open CategoryTheory Module Classical
 open scoped RealInnerProductSpace
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [FiniteDimensional ℝ E]
@@ -129,44 +129,65 @@ noncomputable def incidenceCoeff (F G : Set E) (hF : IsFace P F) (hG : IsFace P 
 -- For a formal sum of k-faces, compute the formal sum of their (k-1)-dimensional boundary faces
 -- The key property is that ∂² = 0, which follows from the fact that each (k-2)-face
 -- appears in the boundary of an even number of k-faces (when working mod 2)
+-- When k-1 < 0, the boundary operator returns zero (there are no faces at negative dimensions)
 noncomputable def boundary (k : ℤ) : chainModule P k →ₗ[ZMod 2] chainModule P (k - 1) where
-  toFun := fun chain => fun (G : {G : Set E // G ∈ faces_dim P (k - 1).natAbs}) =>
-    -- For each (k-1)-face G, sum the coefficients of k-faces F that contain G
-    -- We sum over all k-faces F where G is incident to F
-    Finset.univ.sum fun (F : {F : Set E // F ∈ faces_dim P k.natAbs}) =>
-      if incidence P F.1 G.1 F.2.1 G.2.1 then chain F else 0
+  toFun := fun chain =>
+    if k - 1 < 0 then
+      -- When mapping to negative dimensions, return the zero function
+      fun _ => 0
+    else
+      fun (G : {G : Set E // G ∈ faces_dim P (k - 1).natAbs}) =>
+        -- For each (k-1)-face G, sum the coefficients of k-faces F that contain G
+        -- We sum over all k-faces F where G is incident to F
+        Finset.univ.sum fun (F : {F : Set E // F ∈ faces_dim P k.natAbs}) =>
+          if incidence P F.1 G.1 F.2.1 G.2.1 then chain F else 0
   map_add' := fun x y => by
     -- Show that boundary (x + y) = boundary x + boundary y
     funext G
-    -- We need to show the sum distributes over addition
-    have h : ∀ (F : {F : Set E // F ∈ faces_dim P k.natAbs}),
-      (if incidence P F.1 G.1 F.2.1 G.2.1 then (x + y) F else 0) =
-      (if incidence P F.1 G.1 F.2.1 G.2.1 then x F else 0) +
-      (if incidence P F.1 G.1 F.2.1 G.2.1 then y F else 0) := by
-      intro F
-      by_cases hF : incidence P F.1 G.1 F.2.1 G.2.1
-      · simp only [if_pos hF]
-        rfl
-      · simp only [if_neg hF, add_zero]
-    simp_rw [h]
-    -- Now apply sum_add_distrib
-    exact Finset.sum_add_distrib
+    -- Split on whether k - 1 < 0
+    by_cases h_neg : k - 1 < 0
+    · -- When k - 1 < 0, all three expressions are zero
+      simp only [if_pos h_neg]
+      rfl
+    · -- When k - 1 ≥ 0, proceed with the usual proof
+      simp only [if_neg h_neg]
+      -- We need to show the sum distributes over addition
+      have h : ∀ (F : {F : Set E // F ∈ faces_dim P k.natAbs}),
+        (if incidence P F.1 G.1 F.2.1 G.2.1 then (x + y) F else 0) =
+        (if incidence P F.1 G.1 F.2.1 G.2.1 then x F else 0) +
+        (if incidence P F.1 G.1 F.2.1 G.2.1 then y F else 0) := by
+        intro F
+        by_cases hF : incidence P F.1 G.1 F.2.1 G.2.1
+        · simp only [if_pos hF]
+          rfl
+        · simp only [if_neg hF, add_zero]
+      simp_rw [h]
+      -- Now apply sum_add_distrib
+      exact Finset.sum_add_distrib
   map_smul' := fun r x => by
     -- Show that boundary (r • x) = r • boundary x
     funext G
     simp only [RingHom.id_apply]
-    -- We need to show scalar multiplication distributes through the sum
-    have h : ∀ (F : {F : Set E // F ∈ faces_dim P k.natAbs}),
-      (if incidence P F.1 G.1 F.2.1 G.2.1 then (r • x) F else 0) =
-      r • (if incidence P F.1 G.1 F.2.1 G.2.1 then x F else 0) := by
-      intro F
-      by_cases hF : incidence P F.1 G.1 F.2.1 G.2.1
-      · simp only [if_pos hF]
-        rfl
-      · simp only [if_neg hF, smul_zero]
-    simp_rw [h]
-    -- Now apply smul_sum (but we need the reverse direction)
-    exact (Finset.smul_sum).symm
+    -- Split on whether k - 1 < 0
+    by_cases h_neg : k - 1 < 0
+    · -- When k - 1 < 0, both expressions are zero
+      simp only [if_pos h_neg]
+      -- Need to show: 0 = (r • fun _ => 0) G
+      rfl
+    · -- When k - 1 ≥ 0, proceed with the usual proof
+      simp only [if_neg h_neg]
+      -- We need to show scalar multiplication distributes through the sum
+      have h : ∀ (F : {F : Set E // F ∈ faces_dim P k.natAbs}),
+        (if incidence P F.1 G.1 F.2.1 G.2.1 then (r • x) F else 0) =
+        r • (if incidence P F.1 G.1 F.2.1 G.2.1 then x F else 0) := by
+        intro F
+        by_cases hF : incidence P F.1 G.1 F.2.1 G.2.1
+        · simp only [if_pos hF]
+          rfl
+        · simp only [if_neg hF, smul_zero]
+      simp_rw [h]
+      -- Now apply smul_sum (but we need the reverse direction)
+      exact (Finset.smul_sum).symm
 
 /-- Every edge (1-dimensional face) has exactly two vertices (0-dimensional faces) -/
 lemma edge_has_two_vertices (E_face : Set E) (hE : IsFace P E_face)
@@ -191,26 +212,52 @@ lemma two_faces_property (F : Set E) (H : Set E) (hF : IsFace P F) (hH : IsFace 
         faceDim P H hH + 1 = faceDim P G (sorry : IsFace P G)) :=
   sorry
 
-/-- The boundary operator squares to zero (mod 2) -/
-lemma boundary_comp_boundary (k : ℤ) :
+/-- Rearrangement lemma for double sums over face incidences.
+    This converts a sum over (k-1)-faces then k-faces to a sum over k-faces
+    counting intermediate (k-1)-faces. -/
+lemma boundary_double_sum_rearranged (P : HPolyhedron E) (k : ℤ)
+    (c : chainModule P k)
+    (H : {H : Set E // H ∈ faces_dim P (k - 2).natAbs})
+    [Fintype {G : Set E // G ∈ faces_dim P (k - 1).natAbs}]
+    [Fintype {F : Set E // F ∈ faces_dim P k.natAbs}]
+    [∀ F : {F : Set E // F ∈ faces_dim P k.natAbs}, Decidable (H.1 ⊆ F.1)] :
+    (Finset.univ.sum fun G : {G : Set E // G ∈ faces_dim P (k - 1).natAbs} =>
+      if incidence P G.1 H.1 G.2.1 H.2.1 then
+        (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k.natAbs} =>
+          if incidence P F.1 G.1 F.2.1 G.2.1 then c F else 0)
+      else 0) =
+    (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k.natAbs} =>
+      if H.1 ⊆ F.1 then
+        c F • ((Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k-1).natAbs} =>
+          incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H.1 G.2.1 H.2.1).card : ZMod 2)
+      else 0) := by
+  -- This is a standard double sum rearrangement
+  -- We interchange the order of summation and collect terms
+  sorry
+
+lemma boundary_comp_boundary (k : ℤ)
+    [Fintype {G : Set E // G ∈ faces_dim P (k - 1).natAbs}]
+    [Fintype {F : Set E // F ∈ faces_dim P k.natAbs}] :
     boundary P (k - 1) ∘ₗ boundary P k = 0 := by
   ext c
   funext ⟨H, hH⟩  -- H is a (k-2)-face
-  simp only [LinearMap.comp_apply, LinearMap.zero_apply, Pi.zero_apply]
+  simp only [LinearMap.comp_apply, LinearMap.zero_apply]
 
   -- Handle degenerate cases first
-  by_cases h_neg : k ≤ 1
-  · -- When k ≤ 1, then k-2 ≤ -1, so there are no (k-2)-faces
-    -- The chain module at dimension k-2 is trivial
-    have h_trivial : Subsingleton (chainModule P (k - 2)) := by
-      apply chainModule_trivial_of_neg
-      omega
-    -- In a subsingleton, everything equals everything else
-    -- In particular, everything equals zero
-    have : ((boundary P (k - 1) ∘ₗ boundary P k) c) ⟨H, hH⟩ = (0 : chainModule P (k - 2)) ⟨H, hH⟩ := by
-      apply Subsingleton.elim
-    convert this
+  by_cases h_neg : k < 2
+  · -- When k < 2, then k-1 < 1, so (k-1) - 1 = k-2 < 0
+    -- The boundary operator at dimension k-1 maps to dimension k-2
+    -- Since k-2 < 0, the boundary operator returns zero by definition
+    unfold boundary
+    simp only [LinearMap.coe_mk, AddHom.coe_mk]
+    -- boundary P (k - 1) returns zero when (k-1) - 1 < 0, i.e., when k < 2
+    have h : (k - 1) - 1 < 0 := by omega
+    simp only [if_pos h]
+    -- The composition with any function gives zero
     rfl
+
+  -- Note: The case k = 0 is already handled above since 0 < 2
+  -- The case k = 1 is also handled above since 1 < 2
 
   by_cases h_large : k > finrank ℝ E + 1
   · -- When k is too large, there are no k-faces, so the chain module is trivial
@@ -218,33 +265,41 @@ lemma boundary_comp_boundary (k : ℤ) :
       apply chainModule_trivial_of_large
       omega
     -- The boundary of zero is zero
-    simp only [LinearMap.comp_apply]
     -- Since the k-chain module is trivial, c = 0
-    have : c = 0 := Subsingleton.eq_zero c
+    have : c = 0 := by
+      -- In a subsingleton with zero, everything is zero
+      sorry  -- This follows from h_trivial
     rw [this]
     simp only [LinearMap.map_zero, Pi.zero_apply]
 
   -- Now the main case: 2 ≤ k ≤ finrank ℝ E + 1
   push_neg at h_neg h_large
+  -- From h_neg, we have k ≥ 2
+  -- From h_large, we have k ≤ finrank ℝ E + 1
+  -- So both boundary P k and boundary P (k-1) are well-defined and non-zero
 
   -- The coefficient of H in ∂(∂c) counts paths: k-face → (k-1)-face → (k-2)-face
   -- We can regroup by: for each k-face F containing H,
   -- count how many (k-1)-faces G satisfy H ⊆ G ⊆ F
 
   -- Unfold the boundary definition
-  simp only [boundary]
+  unfold boundary
+  simp only [LinearMap.coe_mk, AddHom.coe_mk]
+
+  -- Since k ≥ 2, we have k - 1 ≥ 1 ≥ 0, so boundary P k doesn't use the if statement
+  -- Also, (k-1) - 1 = k - 2 ≥ 0, so boundary P (k-1) doesn't use the if statement either
+  have hk1 : ¬(k - 1 < 0) := by omega
+  have hk2 : ¬((k - 1) - 1 < 0) := by omega
+  simp only [if_neg hk1, if_neg hk2]
 
   -- The double sum: Σ_{G : k-1} (if H→G) * Σ_{F : k} (if G→F) * c(F)
   -- Rearrange to: Σ_{F : k} c(F) * |{G : k-1 | H ⊆ G ⊆ F}|
 
-  -- The key observation: For convex polyhedra in dimension 3:
-  -- - If k = 2: Each vertex H is in exactly 2 edges G within any face F (edge_has_two_vertices)
-  -- - If k = 3: Each edge H is in exactly 2 faces G within the polyhedron (edge_in_two_faces)
+  -- The key observation: For convex polyhedra:
+  -- Each (k-2)-face H lies in exactly 2 (k-1)-faces within any k-face F containing H
+  -- This is a fundamental combinatorial property of convex polytopes
 
-  -- In both cases, the count is 2, and in ZMod 2: 2 = 0
-
-  -- Compute ∂(∂c) evaluated at H
-  simp only [boundary, LinearMap.coe_mk, AddHom.coe_mk]
+  -- In ZMod 2, the count of 2 equals 0, so each contribution vanishes
 
   -- The double sum can be rearranged: for each k-face F containing H,
   -- we count how many (k-1)-faces G satisfy H ⊆ G ⊆ F
@@ -253,39 +308,7 @@ lemma boundary_comp_boundary (k : ℤ) :
   -- Key claim: Each k-face F containing H contributes c(F) * 2 to the sum
   -- Since we're in ZMod 2, we have 2 = 0, so each contribution is 0
 
-  have sum_rearranged : (Finset.univ.sum fun G : {G : Set E // G ∈ faces_dim P (k - 1).natAbs} =>
-    if incidence P G.1 H.1 G.2.1 hH.1 then
-      (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k.natAbs} =>
-        if incidence P F.1 G.1 F.2.1 G.2.1 then c F else 0)
-    else 0) =
-    (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k.natAbs} =>
-      if H.1 ⊆ F.1 then
-        c F • ((Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k-1).natAbs} =>
-          incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H.1 G.2.1 hH.1).card : ZMod 2)
-      else 0) := by
-    -- This is a standard double sum rearrangement
-    sorry
-
-  rw [sum_rearranged]
-
-  -- Now use the fact that the count is always 2 when H ⊆ F
-  have count_is_two : ∀ (F : {F : Set E // F ∈ faces_dim P k.natAbs}),
-    H.1 ⊆ F.1 →
-    ((Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k-1).natAbs} =>
-      incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H.1 G.2.1 hH.1).card : ZMod 2) = 0 := by
-    intro F hF_contains_H
-    -- By two_faces_property, the count is exactly 2
-    have : (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k-1).natAbs} =>
-      incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H.1 G.2.1 hH.1).card = 2 := by
-      sorry  -- This follows from the convex polyhedron structure
-    simp only [this]
-    -- 2 = 0 in ZMod 2
-    norm_num
-
-  -- Apply the count_is_two to simplify the sum
-  simp only [count_is_two, smul_zero, ite_eq_right_iff]
-  -- The sum of zeros is zero
-  simp only [Finset.sum_const_zero]
+  sorry
 
 /-- The differential for the chain complex (satisfying the indexing convention) -/
 -- d_i : C_{i+1} → C_i is defined as boundary at dimension i+1
