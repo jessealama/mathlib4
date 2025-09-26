@@ -188,13 +188,27 @@ lemma edge_in_two_faces [FiniteDimensional ℝ E] (h_dim : finrank ℝ E = 3)
       (∀ f ∈ faces, IsFace P f ∧ edge ⊆ f ∧ faceDim P f (sorry : IsFace P f) = 2) :=
   sorry
 
-/-- General property: Every codimension-2 face is contained in exactly two codimension-1 faces
-    This is a key property of convex polyhedra. -/
-lemma two_faces_property (F : Set E) (H : Set E) (hF : IsFace P F) (hH : IsFace P H)
-    (h_codim2 : faceDim P H hH + 2 = faceDim P F hF) (h_subset : H ⊆ F) :
-    ∃! (pair : Finset (Set E)), pair.card = 2 ∧
-      (∀ G ∈ pair, IsFace P G ∧ G ⊆ F ∧ H ⊆ G ∧
-        faceDim P H hH + 1 = faceDim P G (sorry : IsFace P G)) :=
+/-- Incidence is true iff subset holds with consecutive dimensions.
+    Note: This is "strict" incidence - only consecutive dimensions are incident.
+    A vertex is incident to an edge, but not directly to a 2-face. -/
+lemma incidence_iff_subset (F G : Set E) (hF : IsFace P F) (hG : IsFace P G) :
+    incidence P F G hF hG = true ↔ G ⊆ F ∧ faceDim P G hG + 1 = faceDim P F hF := by
+  unfold incidence
+  classical
+  split_ifs with h
+  · simp only [eq_self_iff_true, true_iff]
+    exact h
+  · simp only [false_iff]
+    exact h
+
+/-- The Diamond/Interval Property: For convex polyhedra, any codimension-2 face H contained
+    in a face F has exactly 2 intermediate faces between them. This is a fundamental property
+    of convex polyhedra that distinguishes them from more general polytopes. -/
+lemma face_interval_card (F : Set E) (H : Set E) (hF : IsFace P F) (hH : IsFace P H)
+    (h_subset : H ⊆ F) (h_codim2 : faceDim P H hH + 2 = faceDim P F hF) :
+    ∃! (intermediate : Finset (Set E)), intermediate.card = 2 ∧
+      (∀ G ∈ intermediate, IsFace P G ∧ H ⊆ G ∧ G ⊆ F ∧
+        ∃ hG : IsFace P G, faceDim P G hG = faceDim P H hH + 1) :=
   sorry
 
 /-- Rearrangement lemma for double sums over face incidences.
@@ -392,15 +406,94 @@ lemma boundary_comp_boundary (k : ℤ)
   -- The strategy: rearrange to group by k-faces F
   -- For each F containing H, the contribution is c(F) * 2 = c(F) * 0 = 0
 
-  -- This would require the double sum rearrangement lemma
-  -- and the two_faces_property for the combinatorial count
+  -- Step 1: Apply the double sum rearrangement lemma
+  -- First we need to handle the index mismatch: hH says H ∈ faces_dim P (k - 1 - 1)
+  -- but we need H ∈ faces_dim P (k - 2)
+  have hH' : H ∈ faces_dim P (k - 2) := by
+    suffices k - 1 - 1 = k - 2 by rwa [← this]
+    omega
 
-  -- The key steps would be:
-  -- 1. Apply boundary_double_sum_rearranged to interchange the order of summation
-  -- 2. Show that for each k-face F, the count of intermediate (k-1)-faces is either 0 or 2
-  -- 3. Use the fact that 2 = 0 in ZMod 2 to conclude all terms are 0
+  -- We need to show the double sum equals 0
+  -- The sum in our goal is over (k-1)-faces G where incidence P G H holds
 
-  sorry
+  -- First show that our double sum equals 0 as a value (not applied to ⟨H, hH⟩)
+  suffices h_sum_zero : (Finset.univ.sum fun x : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+      if incidence P x.1 H x.2.1 (hH.2.1) then
+        (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k} =>
+          if incidence P F.1 x.1 F.2.1 x.2.1 then c F else 0)
+      else 0) = 0 by
+    -- Once we have h_sum_zero, we can use it to show the goal
+    -- Since 0 is the zero function, 0 ⟨H, hH⟩ = 0
+    convert h_sum_zero
+
+  -- Apply the double sum rearrangement lemma
+  have h_rearranged : (Finset.univ.sum fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+      if incidence P G.1 H G.2.1 hH'.1 then
+        (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k} =>
+          if incidence P F.1 G.1 F.2.1 G.2.1 then c F else 0)
+      else 0) =
+    (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k} =>
+      c F • (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+        incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H G.2.1 hH'.1).card : ZMod 2) := by
+    -- Apply boundary_double_sum_rearranged with ⟨H, hH'⟩
+    have := boundary_double_sum_rearranged P k c ⟨H, hH'⟩
+    -- The sums match except for how we package H
+    convert this
+
+  -- Now we need to show both sums equal 0
+  -- First, show that the sum in h_sum_zero and the one in h_rearranged are the same
+  have h_sums_equal : (Finset.univ.sum fun x : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+      if incidence P x.1 H x.2.1 (hH.2.1) then
+        (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k} =>
+          if incidence P F.1 x.1 F.2.1 x.2.1 then c F else 0)
+      else 0) =
+    (Finset.univ.sum fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+      if incidence P G.1 H G.2.1 hH'.1 then
+        (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k} =>
+          if incidence P F.1 G.1 F.2.1 G.2.1 then c F else 0)
+      else 0) := by
+    -- These sums are the same - just using hH vs hH' for the proof that H is a face
+    congr
+
+  rw [h_sums_equal, h_rearranged]
+
+  -- Now show the rearranged sum equals 0
+  -- Each term is c F • (count of G's), where the count is 0 or 2
+  -- Since 2 = 0 in ZMod 2, all terms vanish
+
+  -- We'll show each term in the sum equals 0
+  apply Finset.sum_eq_zero
+  intros F _
+
+  -- For each F, we need to show c F • (count of intermediate G's) = 0
+  -- The count is the cardinality of G's that are incident to both F and H
+
+  -- We need to convert our incidence-based count to the subset-based count
+  -- used in face_interval_card
+
+  -- We'll show the count is either 0 or 2, so the term vanishes in ZMod 2
+  -- The key cases are:
+  -- 1. H ⊄ F: count = 0
+  -- 2. H ⊆ F but wrong dimension: count = 0
+  -- 3. H ⊆ F with codimension 2: count = 2 (by Diamond property)
+
+  -- Simplified proof: just check if count is 0 or 2
+  have count_is_0_or_2 : ∃ n : ℕ, n ∈ ({0, 2} : Set ℕ) ∧
+      (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+        incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H G.2.1 hH'.1).card = n := by
+    -- The Diamond property for convex polyhedra ensures this
+    -- Either there are no intermediate faces (count = 0) or exactly 2
+    sorry
+
+  obtain ⟨n, hn_mem, hn_eq⟩ := count_is_0_or_2
+  rw [hn_eq]
+
+  -- Both 0 and 2 give 0 in ZMod 2
+  rcases hn_mem with rfl | rfl
+  · -- n = 0 case
+    simp only [Nat.cast_zero, smul_zero]
+  · -- n = 2 case
+    simp only [Nat.cast_ofNat, two_eq_zero, smul_zero]
 
 /-- The differential for the chain complex (satisfying the indexing convention) -/
 -- d_i : C_{i+1} → C_i is defined as boundary at dimension i+1
