@@ -259,7 +259,7 @@ lemma boundary_comp_boundary (k : ℤ)
   -- Note: The case k = 0 is already handled above since 0 < 2
   -- The case k = 1 is also handled above since 1 < 2
 
-  by_cases h_large : k > finrank ℝ E + 1
+  by_cases h_large : k > finrank ℝ E
   · -- When k is too large, there are no k-faces, so the chain module is trivial
     have h_trivial : Subsingleton (chainModule P k) := by
       apply chainModule_trivial_of_large
@@ -268,14 +268,16 @@ lemma boundary_comp_boundary (k : ℤ)
     -- Since the k-chain module is trivial, c = 0
     have : c = 0 := by
       -- In a subsingleton with zero, everything is zero
-      sorry  -- This follows from h_trivial
+      -- Since chainModule P k is an AddCommGroup with a Subsingleton instance,
+      -- all elements are equal, and in particular equal to 0
+      exact Subsingleton.elim c 0
     rw [this]
     simp only [LinearMap.map_zero, Pi.zero_apply]
 
-  -- Now the main case: 2 ≤ k ≤ finrank ℝ E + 1
+  -- Now the main case: 2 ≤ k ≤ finrank ℝ E
   push_neg at h_neg h_large
   -- From h_neg, we have k ≥ 2
-  -- From h_large, we have k ≤ finrank ℝ E + 1
+  -- From h_large, we have k ≤ finrank ℝ E
   -- So both boundary P k and boundary P (k-1) are well-defined and non-zero
 
   -- The coefficient of H in ∂(∂c) counts paths: k-face → (k-1)-face → (k-2)-face
