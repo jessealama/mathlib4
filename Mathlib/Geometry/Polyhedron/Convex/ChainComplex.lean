@@ -196,7 +196,7 @@ lemma incidence_iff_subset (F G : Set E) (hF : IsFace P F) (hG : IsFace P G) :
   unfold incidence
   classical
   split_ifs with h
-  · simp only [eq_self_iff_true, true_iff]
+  · simp only [true_iff]
     exact h
   · simp only [false_iff]
     exact h
@@ -223,9 +223,16 @@ lemma incidence_filter_eq_two (F : Set E) (H : Set E)
     (hF : IsFace P F) (hH : IsFace P H)
     (k : ℤ) [Fintype {G : Set E // G ∈ faces_dim P (k - 1)}]
     (hF_dim : (faceDim P F hF : ℤ) = k) (hH_dim : (faceDim P H hH : ℤ) = k - 2)
-    (h_subset : H ⊆ F) (h_codim : faceDim P H hH + 2 = faceDim P F hF) :
+    (h_subset : H ⊆ F) :
     (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
       incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH).card = 2 := by
+  -- Derive h_codim from the dimension hypotheses
+  have h_codim : faceDim P H hH + 2 = faceDim P F hF := by
+    have : (faceDim P H hH : ℤ) + 2 = (faceDim P F hF : ℤ) := by
+      rw [hH_dim, hF_dim]
+      omega
+    exact Nat.cast_injective this
+
   -- Apply face_interval_card to get the unique set of 2 intermediate faces
   obtain ⟨intermediate, ⟨h_card, h_prop⟩, h_unique⟩ :=
     face_interval_card P F H hF hH h_subset h_codim
@@ -307,18 +314,9 @@ lemma intermediate_face_count_zero_or_two (k : ℤ)
       obtain ⟨_, hH_dim⟩ := hH'.2
       exact hH_dim
 
-    -- Check if H has codimension 2 in F
-    have h_codim : faceDim P H hH_face + 2 = faceDim P F.1 hF_face := by
-      -- Convert to integer arithmetic
-      have : (faceDim P H hH_face : ℤ) + 2 = (faceDim P F.1 hF_face : ℤ) := by
-        rw [hH_dim, hF_dim]
-        omega
-      -- Convert back to natural numbers
-      exact Nat.cast_injective this
-
     -- Apply the helper lemma directly
     use 2, Or.inr rfl
-    exact incidence_filter_eq_two P F.1 H hF_face hH_face k hF_dim hH_dim h_subset h_codim
+    exact incidence_filter_eq_two P F.1 H hF_face hH_face k hF_dim hH_dim h_subset
 
   · -- H ⊄ F: no intermediate faces
     use 0, Or.inl rfl
