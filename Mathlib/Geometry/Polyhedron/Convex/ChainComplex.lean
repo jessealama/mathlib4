@@ -201,6 +201,64 @@ lemma incidence_iff_subset (F G : Set E) (hF : IsFace P F) (hG : IsFace P G) :
   · simp only [false_iff]
     exact h
 
+/-- Face dimension is unique regardless of which proof of IsFace is used -/
+lemma faceDim_unique (F : Set E) (hF1 hF2 : IsFace P F) :
+    faceDim P F hF1 = faceDim P F hF2 := by
+  -- The dimension of a face is intrinsic to the face itself,
+  -- not dependent on the proof that it's a face
+  sorry
+
+/-- Helper: The incidence filter matches the intermediate faces from Diamond property -/
+lemma incidence_filter_eq_intermediate (F : Set E) (H : Set E)
+    (hF : IsFace P F) (hH : IsFace P H)
+    (k : ℤ) [Fintype {G : Set E // G ∈ faces_dim P (k - 1)}]
+    (hF_dim : (faceDim P F hF : ℤ) = k) (hH_dim : (faceDim P H hH : ℤ) = k - 2)
+    (h_subset : H ⊆ F) (intermediate : Finset (Set E))
+    (h_prop : ∀ G ∈ intermediate, IsFace P G ∧ H ⊆ G ∧ G ⊆ F ∧
+              ∃ hG : IsFace P G, faceDim P G hG = faceDim P H hH + 1) :
+    (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+      incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH).card = intermediate.card := by
+  congr 1
+  apply Finset.ext
+  intro G
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  constructor
+  · -- If G satisfies incidence conditions, it's in intermediate
+    intro ⟨hFG_inc, hGH_inc⟩
+    rw [incidence_iff_subset] at hFG_inc hGH_inc
+    have hG_face : IsFace P G.1 := G.2.1
+    have hG_dim : (faceDim P G.1 hG_face : ℤ) = k - 1 := by
+      obtain ⟨_, hG_dim⟩ := G.2.2
+      exact hG_dim
+    have hG_dim_nat : faceDim P G.1 hG_face = faceDim P H hH + 1 := by
+      have : (faceDim P G.1 hG_face : ℤ) = (faceDim P H hH : ℤ) + 1 := by
+        rw [hG_dim, hH_dim]
+        omega
+      exact Nat.cast_injective this
+    exact h_prop G.1 ⟨hG_face, hGH_inc.1, hFG_inc.1, hG_face, hG_dim_nat⟩
+  · -- If G is in intermediate, it satisfies incidence conditions
+    intro hG_inter
+    obtain ⟨hG_face, hG_sub_H, hG_sub_F, hG_face', hG_dim_rel⟩ := h_prop G.1 hG_inter
+    constructor
+    · rw [incidence_iff_subset]
+      have hG_dim : (faceDim P G.1 G.2.1 : ℤ) = k - 1 := by
+        obtain ⟨_, hG_dim⟩ := G.2.2
+        exact hG_dim
+      constructor
+      · exact hG_sub_F
+      · have : faceDim P G.1 G.2.1 + 1 = faceDim P F hF := by
+          have eq1 : (faceDim P G.1 G.2.1 : ℤ) + 1 = k := by
+            rw [hG_dim]
+            omega
+          have eq2 : (faceDim P F hF : ℤ) = k := hF_dim
+          exact Nat.cast_injective (eq1.trans eq2.symm)
+        exact this
+    · rw [incidence_iff_subset]
+      constructor
+      · exact hG_sub_H
+      · rw [← faceDim_unique P G.1 G.2.1 hG_face']
+        exact hG_dim_rel.symm
+
 /-- The Diamond/Interval Property: For convex polyhedra, any codimension-2 face H contained
     in a face F has exactly 2 intermediate faces between them. This is a fundamental property
     of convex polyhedra that distinguishes them from more general polytopes. -/
@@ -210,6 +268,68 @@ lemma face_interval_card (F : Set E) (H : Set E) (hF : IsFace P F) (hH : IsFace 
       (∀ G ∈ intermediate, IsFace P G ∧ H ⊆ G ∧ G ⊆ F ∧
         ∃ hG : IsFace P G, faceDim P G hG = faceDim P H hH + 1) :=
   sorry
+
+/-- The count of intermediate (k-1)-faces between a k-face F and (k-2)-face H
+    is either 0 or 2 for convex polyhedra -/
+lemma intermediate_face_count_zero_or_two (k : ℤ)
+    [Fintype {G : Set E // G ∈ faces_dim P (k - 1)}]
+    (F : {F : Set E // F ∈ faces_dim P k})
+    (H : Set E) (hH' : H ∈ faces_dim P (k - 2)) :
+    ∃ n : ℕ, n ∈ ({0, 2} : Set ℕ) ∧
+      (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+        incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H G.2.1 hH'.1).card = n := by
+  -- Extract face proofs from membership in faces_dim
+  have hF_face : IsFace P F.1 := F.2.1
+  have hH_face : IsFace P H := hH'.1
+
+  -- Check if H ⊆ F
+  by_cases h_subset : H ⊆ F.1
+  · -- H ⊆ F: check dimensions
+    -- F has dimension k, H has dimension k-2
+    have hF_dim : (faceDim P F.1 hF_face : ℤ) = k := by
+      obtain ⟨_, hF_dim⟩ := F.2.2
+      exact hF_dim
+    have hH_dim : (faceDim P H hH_face : ℤ) = k - 2 := by
+      obtain ⟨_, hH_dim⟩ := hH'.2
+      exact hH_dim
+
+    -- Check if H has codimension 2 in F
+    have h_codim : faceDim P H hH_face + 2 = faceDim P F.1 hF_face := by
+      -- Convert to integer arithmetic
+      have : (faceDim P H hH_face : ℤ) + 2 = (faceDim P F.1 hF_face : ℤ) := by
+        rw [hH_dim, hF_dim]
+        omega
+      -- Convert back to natural numbers
+      exact Nat.cast_injective this
+
+    -- Apply Diamond property: there are exactly 2 intermediate faces
+    obtain ⟨intermediate, ⟨h_card, h_prop⟩, h_unique⟩ :=
+      face_interval_card P F.1 H hF_face hH_face h_subset h_codim
+
+    use 2, Or.inr rfl
+
+    -- Use the helper lemma to show the counts match
+    rw [incidence_filter_eq_intermediate P F.1 H hF_face hH_face k hF_dim hH_dim
+        h_subset intermediate h_prop]
+    exact h_card
+
+  · -- H ⊄ F: no intermediate faces
+    use 0, Or.inl rfl
+
+    -- If H ⊄ F, there can't be any G with H ⊆ G ⊆ F
+    simp only [Finset.card_eq_zero]
+    apply Finset.ext
+    intro G
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and,
+               Finset.notMem_empty, iff_false, not_and]
+    intro hFG
+    -- If the first incidence holds, the second can't
+    -- because that would imply H ⊆ G ⊆ F
+    rw [incidence_iff_subset] at hFG
+    intro hGH_inc
+    rw [incidence_iff_subset] at hGH_inc
+    -- This gives H ⊆ G ⊆ F, contradicting h_subset
+    exact h_subset (hGH_inc.1.trans hFG.1)
 
 /-- Rearrangement lemma for double sums over face incidences.
     This converts a sum over (k-1)-faces then k-faces to a sum over k-faces
@@ -477,127 +597,8 @@ lemma boundary_comp_boundary (k : ℤ)
   -- 2. H ⊆ F but wrong dimension: count = 0
   -- 3. H ⊆ F with codimension 2: count = 2 (by Diamond property)
 
-  -- Simplified proof: just check if count is 0 or 2
-  have count_is_0_or_2 : ∃ n : ℕ, n ∈ ({0, 2} : Set ℕ) ∧
-      (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
-        incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H G.2.1 hH'.1).card = n := by
-    -- The Diamond property for convex polyhedra ensures this
-    -- Either there are no intermediate faces (count = 0) or exactly 2
-
-    -- Extract face proofs from membership in faces_dim
-    have hF_face : IsFace P F.1 := F.2.1
-    have hH_face : IsFace P H := hH'.1
-
-    -- Check if H ⊆ F
-    by_cases h_subset : H ⊆ F.1
-    · -- H ⊆ F: check dimensions
-      -- F has dimension k, H has dimension k-2
-      have hF_dim : (faceDim P F.1 hF_face : ℤ) = k := by
-        obtain ⟨_, hF_dim⟩ := F.2.2
-        exact hF_dim
-      have hH_dim : (faceDim P H hH_face : ℤ) = k - 2 := by
-        obtain ⟨_, hH_dim⟩ := hH'.2
-        exact hH_dim
-
-      -- Check if H has codimension 2 in F
-      have h_codim : faceDim P H hH_face + 2 = faceDim P F.1 hF_face := by
-        -- Convert to integer arithmetic
-        have : (faceDim P H hH_face : ℤ) + 2 = (faceDim P F.1 hF_face : ℤ) := by
-          rw [hH_dim, hF_dim]
-          omega
-        -- Convert back to natural numbers
-        exact Nat.cast_injective this
-
-      -- Apply Diamond property: there are exactly 2 intermediate faces
-      obtain ⟨intermediate, ⟨h_card, h_prop⟩, h_unique⟩ :=
-        face_interval_card P F.1 H hF_face hH_face h_subset h_codim
-
-      use 2, Or.inr rfl
-
-      -- Need to show the filter has the same cardinality as intermediate
-      -- The filter counts G with H ⊆ G ⊆ F and consecutive dimensions
-      -- This matches exactly what face_interval_card gives us
-
-      -- The filter counts exactly those G that are in intermediate
-      -- Both count (k-1)-faces G with H ⊆ G ⊆ F
-      trans intermediate.card
-      · congr 1
-        -- Show the filtered set equals intermediate (as Finsets)
-        apply Finset.ext
-        intro G
-        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-        constructor
-        · -- If G satisfies incidence conditions, it's in intermediate
-          intro ⟨hFG_inc, hGH_inc⟩
-          rw [incidence_iff_subset] at hFG_inc hGH_inc
-          -- G is a (k-1)-face with H ⊆ G ⊆ F
-          have hG_face : IsFace P G.1 := G.2.1
-          have hG_dim : (faceDim P G.1 hG_face : ℤ) = k - 1 := by
-            obtain ⟨_, hG_dim⟩ := G.2.2
-            exact hG_dim
-          -- Check that G has the right dimension relation to H
-          have hG_dim_nat : faceDim P G.1 hG_face = faceDim P H hH_face + 1 := by
-            have : (faceDim P G.1 hG_face : ℤ) = (faceDim P H hH_face : ℤ) + 1 := by
-              rw [hG_dim, hH_dim]
-              omega
-            exact Nat.cast_injective this
-          -- Now G satisfies all conditions for intermediate
-          exact h_prop G.1 ⟨hG_face, hGH_inc.1, hFG_inc.1, hG_face, hG_dim_nat⟩
-        · -- If G is in intermediate, it satisfies incidence conditions
-          intro hG_inter
-          obtain ⟨hG_face, hG_sub_H, hG_sub_F, hG_face', hG_dim_rel⟩ := h_prop G.1 hG_inter
-          constructor
-          · rw [incidence_iff_subset]
-            -- Need G ⊆ F and dimension relation
-            have hG_dim : (faceDim P G.1 G.2.1 : ℤ) = k - 1 := by
-              obtain ⟨_, hG_dim⟩ := G.2.2
-              exact hG_dim
-            constructor
-            · exact hG_sub_F
-            · -- Show faceDim G + 1 = faceDim F
-              have : faceDim P G.1 G.2.1 + 1 = faceDim P F.1 hF_face := by
-                have eq1 : (faceDim P G.1 G.2.1 : ℤ) + 1 = k := by
-                  rw [hG_dim]
-                  omega
-                have eq2 : (faceDim P F.1 hF_face : ℤ) = k := hF_dim
-                exact Nat.cast_injective (eq1.trans eq2.symm)
-              exact this
-          · rw [incidence_iff_subset]
-            constructor
-            · exact hG_sub_H
-            · -- Show faceDim H + 1 = faceDim G
-              -- We have hG_dim_rel: faceDim G hG_face' = faceDim H hH_face + 1
-              -- Need to show: faceDim H hH'.1 + 1 = faceDim G G.2.1
-              -- These are the same since face dimension is unique
-              have eq1 : faceDim P G.1 hG_face' = faceDim P G.1 G.2.1 := by
-                -- Face dimension is unique for a given face
-                sorry  -- This should follow from uniqueness of face dimension
-              have eq2 : faceDim P H hH_face = faceDim P H hH'.1 := by
-                -- Face dimension is unique for a given face
-                sorry  -- This should follow from uniqueness of face dimension
-              rw [← eq2, ← eq1]
-              exact hG_dim_rel.symm
-      · exact h_card
-
-    · -- H ⊄ F: no intermediate faces
-      use 0, Or.inl rfl
-
-      -- If H ⊄ F, there can't be any G with H ⊆ G ⊆ F
-      simp only [Finset.card_eq_zero]
-      apply Finset.ext
-      intro G
-      simp only [Finset.mem_filter, Finset.mem_univ, true_and,
-                 Finset.notMem_empty, iff_false, not_and]
-      intro hFG
-      -- If the first incidence holds, the second can't
-      -- because that would imply H ⊆ G ⊆ F
-      rw [incidence_iff_subset] at hFG
-      intro hGH_inc
-      rw [incidence_iff_subset] at hGH_inc
-      -- This gives H ⊆ G ⊆ F, contradicting h_subset
-      exact h_subset (hGH_inc.1.trans hFG.1)
-
-  obtain ⟨n, hn_mem, hn_eq⟩ := count_is_0_or_2
+  -- Apply the lemma showing the count is either 0 or 2
+  obtain ⟨n, hn_mem, hn_eq⟩ := intermediate_face_count_zero_or_two P k F H hH'
   rw [hn_eq]
 
   -- Both 0 and 2 give 0 in ZMod 2
@@ -606,6 +607,7 @@ lemma boundary_comp_boundary (k : ℤ)
     simp only [Nat.cast_zero, smul_zero]
   · -- n = 2 case
     simp only [Nat.cast_ofNat, two_eq_zero, smul_zero]
+
 
 /-- The differential for the chain complex (satisfying the indexing convention) -/
 -- d_i : C_{i+1} → C_i is defined as boundary at dimension i+1
