@@ -294,23 +294,53 @@ lemma boundary_comp_boundary (k : ℤ)
   have hk2 : ¬((k - 1) - 1 < 0) := by omega
   simp only [if_neg hk1, if_neg hk2]
 
-  -- The double sum: Σ_{G : k-1} (if H→G) * Σ_{F : k} (if G→F) * c(F)
-  -- Rearrange to: Σ_{F : k} c(F) * |{G : k-1 | H ⊆ G ⊆ F}|
+  -- Let's compute (boundary P (k-1) ∘ₗ boundary P k) c evaluated at ⟨H, hH⟩
+  -- This is: (boundary P (k-1)) ((boundary P k) c) ⟨H, hH⟩
 
-  -- The key observation: For convex polyhedra:
-  -- Each (k-2)-face H lies in exactly 2 (k-1)-faces within any k-face F containing H
-  -- This is a fundamental combinatorial property of convex polytopes
+  -- First, (boundary P k) c is a function that takes a (k-1)-face G and returns:
+  -- Σ_{F : k-face} (if F incident to G then c(F) else 0)
 
-  -- In ZMod 2, the count of 2 equals 0, so each contribution vanishes
+  -- Second, boundary P (k-1) applied to this gives us a function on (k-2)-faces
+  -- At H, this gives: Σ_{G : (k-1)-face} (if G incident to H then [(boundary P k) c](G) else 0)
 
-  -- The double sum can be rearranged: for each k-face F containing H,
-  -- we count how many (k-1)-faces G satisfy H ⊆ G ⊆ F
-  -- By convexity, this number is exactly 2
+  -- Expanding the inner sum:
+  -- = Σ_{G : (k-1)-face} (if G incident to H then [Σ_{F : k-face} (if F incident to G then c(F) else 0)] else 0)
 
-  -- Key claim: Each k-face F containing H contributes c(F) * 2 to the sum
-  -- Since we're in ZMod 2, we have 2 = 0, so each contribution is 0
+  -- This is a double sum that counts paths: k-face F → (k-1)-face G → (k-2)-face H
+  -- We can rearrange this by grouping by k-faces F
 
-  sorry
+  -- For each k-face F, we count: how many (k-1)-faces G satisfy both:
+  -- (1) G is incident to H (i.e., H ⊆ G and dim(H) + 1 = dim(G))
+  -- (2) F is incident to G (i.e., G ⊆ F and dim(G) + 1 = dim(F))
+
+  -- This counts (k-1)-faces G such that H ⊆ G ⊆ F with the right dimensions
+
+  -- The key combinatorial fact: For any k-face F containing the (k-2)-face H,
+  -- there are exactly 2 such (k-1)-faces G
+  -- This is because H is a codimension-2 face of F, and in convex polytopes,
+  -- codimension-2 faces lie in exactly 2 codimension-1 faces
+
+  -- Since we're working in ZMod 2, the count of 2 equals 0
+
+  -- The double sum computes: Σ_G Σ_F (incidence coefficients) * c(F)
+  -- This counts paths: k-face F → (k-1)-face G → (k-2)-face H
+
+  -- We can rearrange this as: Σ_F c(F) * (number of G such that H ⊆ G ⊆ F)
+
+  -- The key combinatorial fact for convex polytopes:
+  -- For any k-face F containing the (k-2)-face H,
+  -- there are exactly 2 (k-1)-faces G with H ⊆ G ⊆ F
+  -- (This is because H has codimension 2 in F)
+
+  -- In ZMod 2, we have 2 = 0, so each c(F) appears with coefficient 0
+  -- Therefore the entire sum equals 0
+
+  -- The formal proof requires:
+  -- 1. Rearranging the double sum (interchange summation order)
+  -- 2. Counting intermediate faces (the combinatorial lemma)
+  -- 3. Applying 2 = 0 in ZMod 2
+
+  sorry  -- Complete the formal argument
 
 /-- The differential for the chain complex (satisfying the indexing convention) -/
 -- d_i : C_{i+1} → C_i is defined as boundary at dimension i+1
