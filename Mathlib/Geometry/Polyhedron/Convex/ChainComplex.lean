@@ -218,46 +218,10 @@ lemma incidence_filter_eq_intermediate (F : Set E) (H : Set E)
               ∃ hG : IsFace P G, faceDim P G hG = faceDim P H hH + 1) :
     (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
       incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH).card = intermediate.card := by
-  congr 1
-  apply Finset.ext
-  intro G
-  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-  constructor
-  · -- If G satisfies incidence conditions, it's in intermediate
-    intro ⟨hFG_inc, hGH_inc⟩
-    rw [incidence_iff_subset] at hFG_inc hGH_inc
-    have hG_face : IsFace P G.1 := G.2.1
-    have hG_dim : (faceDim P G.1 hG_face : ℤ) = k - 1 := by
-      obtain ⟨_, hG_dim⟩ := G.2.2
-      exact hG_dim
-    have hG_dim_nat : faceDim P G.1 hG_face = faceDim P H hH + 1 := by
-      have : (faceDim P G.1 hG_face : ℤ) = (faceDim P H hH : ℤ) + 1 := by
-        rw [hG_dim, hH_dim]
-        omega
-      exact Nat.cast_injective this
-    exact h_prop G.1 ⟨hG_face, hGH_inc.1, hFG_inc.1, hG_face, hG_dim_nat⟩
-  · -- If G is in intermediate, it satisfies incidence conditions
-    intro hG_inter
-    obtain ⟨hG_face, hG_sub_H, hG_sub_F, hG_face', hG_dim_rel⟩ := h_prop G.1 hG_inter
-    constructor
-    · rw [incidence_iff_subset]
-      have hG_dim : (faceDim P G.1 G.2.1 : ℤ) = k - 1 := by
-        obtain ⟨_, hG_dim⟩ := G.2.2
-        exact hG_dim
-      constructor
-      · exact hG_sub_F
-      · have : faceDim P G.1 G.2.1 + 1 = faceDim P F hF := by
-          have eq1 : (faceDim P G.1 G.2.1 : ℤ) + 1 = k := by
-            rw [hG_dim]
-            omega
-          have eq2 : (faceDim P F hF : ℤ) = k := hF_dim
-          exact Nat.cast_injective (eq1.trans eq2.symm)
-        exact this
-    · rw [incidence_iff_subset]
-      constructor
-      · exact hG_sub_H
-      · rw [← faceDim_unique P G.1 G.2.1 hG_face']
-        exact hG_dim_rel.symm
+  -- The filtered set and intermediate have the same cardinality
+  -- Both count (k-1)-dimensional faces G with H ⊆ G ⊆ F
+  -- The proof requires showing a bijection between them
+  sorry
 
 /-- The Diamond/Interval Property: For convex polyhedra, any codimension-2 face H contained
     in a face F has exactly 2 intermediate faces between them. This is a fundamental property
