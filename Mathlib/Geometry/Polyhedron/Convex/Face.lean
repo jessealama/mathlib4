@@ -72,6 +72,82 @@ def IsFacet (F : Set E) : Prop :=
 
 end FiniteDimensional
 
+/-- A face of the polyhedron, bundled with its proof -/
+structure Face where
+  /-- The underlying set of points -/
+  carrier : Set E
+  /-- Proof that this is a face -/
+  is_face : IsFace P carrier
+
+/-- The dimension of a bundled face -/
+noncomputable def Face.dim [FiniteDimensional ℝ E] (F : Face P) : ℕ :=
+  faceDim P F.carrier F.is_face
+
+/-- Coercion from Face to Set E -/
+instance : CoeOut (Face P) (Set E) where
+  coe F := F.carrier
+
+/-- Two faces are equal if their carriers are equal -/
+@[ext]
+lemma Face.ext {F G : Face P} (h : F.carrier = G.carrier) : F = G := by
+  cases F; cases G; congr
+
+section FiniteDimensional
+variable [FiniteDimensional ℝ E]
+
+/-- A k-face is a face with dimension k -/
+structure KFace (k : ℤ) extends Face P where
+  /-- Proof that the dimension equals k -/
+  dim_eq : (toFace.dim : ℤ) = k
+
+/-- Coercion from KFace to Face -/
+instance {k : ℤ} : Coe (KFace P k) (Face P) where
+  coe F := F.toFace
+
+/-- Coercion from KFace to Set E -/
+instance {k : ℤ} : CoeOut (KFace P k) (Set E) where
+  coe F := F.carrier
+
+/-- The type of k-faces is finite for each k -/
+noncomputable instance kface_finite (k : ℤ) : Fintype (KFace P k) := by
+  -- Each k-face corresponds to a subset of half-spaces where equality holds
+  -- Since P.halfSpaces is finite, there are finitely many such faces
+  sorry
+
+/-- Convert between KFace type and faces_dim membership -/
+lemma kface_iff_mem_faces_dim (k : ℤ) (F : Set E) :
+    (∃ kF : KFace P k, kF.carrier = F) ↔
+    (IsFace P F ∧ ∃ hF : IsFace P F, (faceDim P F hF : ℤ) = k) := by
+  constructor
+  · intro ⟨kF, hF⟩
+    rw [← hF]
+    exact ⟨kF.is_face, kF.is_face, kF.dim_eq⟩
+  · intro ⟨hF, _, hdim⟩
+    use ⟨⟨F, hF⟩, hdim⟩
+    rfl
+
+/-- Incidence between faces using the type-based approach -/
+def Face.incident (F G : Face P) : Prop :=
+  G.carrier ⊆ F.carrier ∧ G.dim + 1 = F.dim
+
+/-- Check if a face contains another -/
+def Face.contains (F G : Face P) : Prop :=
+  G.carrier ⊆ F.carrier
+
+/-- No k-faces exist for k < 0 -/
+lemma KFace.empty_of_neg (k : ℤ) (hk : k < 0) : IsEmpty (KFace P k) := by
+  constructor
+  intro kF
+  have : (kF.dim : ℤ) ≥ 0 := Int.natCast_nonneg _
+  rw [kF.dim_eq] at this
+  omega
+
+/-- No k-faces exist for k > dim(E) -/
+lemma KFace.empty_of_large (k : ℤ) (hk : k > finrank ℝ E) : IsEmpty (KFace P k) := by
+  sorry
+
+end FiniteDimensional
+
 /-- The set of all faces of a polyhedron -/
 def faces (P : HPolyhedron E) : Set (Set E) :=
   {F | IsFace P F}

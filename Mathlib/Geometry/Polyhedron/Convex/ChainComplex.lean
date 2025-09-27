@@ -43,98 +43,10 @@ namespace HPolyhedron
 
 variable (P : HPolyhedron E)
 
-/-- A face of the polyhedron, bundled with its proof -/
-structure Face where
-  /-- The underlying set of points -/
-  carrier : Set E
-  /-- Proof that this is a face -/
-  is_face : IsFace P carrier
-
-/-- The dimension of a face -/
-noncomputable def Face.dim (F : Face P) : ℕ := faceDim P F.carrier F.is_face
-
-/-- Coercion from Face to Set E -/
-instance : CoeOut (Face P) (Set E) where
-  coe F := F.carrier
-
-/-- Two faces are equal if their carriers are equal -/
-@[ext]
-lemma Face.ext {F G : Face P} (h : F.carrier = G.carrier) : F = G := by
-  cases F; cases G; congr
-
-/-- A k-face is a face with dimension k -/
-structure KFace (k : ℤ) extends Face P where
-  /-- Proof that the dimension equals k -/
-  dim_eq : (toFace.dim : ℤ) = k
-
-/-- Coercion from KFace to Face -/
-instance {k : ℤ} : Coe (KFace P k) (Face P) where
-  coe F := F.toFace
-
-/-- Coercion from KFace to Set E -/
-instance {k : ℤ} : CoeOut (KFace P k) (Set E) where
-  coe F := F.carrier
-
-/-- The type of k-faces is finite for each k -/
-noncomputable instance kface_finite (k : ℤ) : Fintype (KFace P k) := by
-  -- Each k-face corresponds to a subset of half-spaces where equality holds
-  -- Since P.halfSpaces is finite, there are finitely many such faces
-  sorry
-
-/-- The k-dimensional faces of the polyhedron (legacy definition for compatibility) -/
+/-- The k-dimensional faces of the polyhedron -/
 -- Note: This is empty when k < 0 or k > dim(E)
 def faces_dim (k : ℤ) : Set (Set E) :=
   {F | IsFace P F ∧ ∃ hF : IsFace P F, (faceDim P F hF : ℤ) = k}
-
-/-- Convert between KFace type and faces_dim membership -/
-lemma kface_iff_mem_faces_dim (k : ℤ) (F : Set E) :
-    (∃ kF : KFace P k, kF.carrier = F) ↔ F ∈ faces_dim P k := by
-  constructor
-  · intro ⟨kF, hF⟩
-    rw [← hF]
-    exact ⟨kF.is_face, kF.is_face, kF.dim_eq⟩
-  · intro ⟨hF, _, hdim⟩
-    use ⟨⟨F, hF⟩, hdim⟩
-    rfl
-
-/-- Incidence between faces using the type-based approach -/
-def Face.incident (P : HPolyhedron E) (F G : Face P) : Prop :=
-  G.carrier ⊆ F.carrier ∧ G.dim + 1 = F.dim
-
-/-- Check if a face contains another -/
-def Face.contains (P : HPolyhedron E) (F G : Face P) : Prop := G.carrier ⊆ F.carrier
-
-/-- No k-faces exist for k < 0 -/
-lemma KFace.empty_of_neg (k : ℤ) (hk : k < 0) : IsEmpty (KFace P k) := by
-  constructor
-  intro kF
-  have : (kF.dim : ℤ) ≥ 0 := Int.natCast_nonneg _
-  rw [kF.dim_eq] at this
-  omega
-
-/-- No k-faces exist for k > dim(E) -/
-lemma KFace.empty_of_large (k : ℤ) (hk : k > finrank ℝ E) : IsEmpty (KFace P k) := by
-  sorry
-
-/-- The Diamond Property using the cleaner type: For any k-face F and (k-2)-face H
-    where H ⊆ F, there are exactly 2 intermediate (k-1)-faces -/
-theorem KFace.diamond_property {k : ℤ} (F : KFace P k) (H : KFace P (k - 2))
-    (h_subset : H.carrier ⊆ F.carrier) :
-    (KFace.incidenceFilter F H).card = 2 := by
-  sorry
-
-/-- Main theorem with the cleaner type: ∂² = 0 -/
-theorem KChainModule.boundary_squared (k : ℤ) :
-    KChainModule.boundary P (k - 1) ∘ₗ KChainModule.boundary P k = 0 := by
-  ext c : 1
-  funext H  -- H : KFace P (k - 2)
-  simp only [LinearMap.comp_apply, LinearMap.zero_apply]
-
-  -- The coefficient of H in ∂²(c) counts paths F → G → H
-  -- where F is a k-face, G is a (k-1)-face, H is a (k-2)-face
-  -- By the Diamond property, each pair (F, H) with H ⊆ F has exactly 2 intermediate G's
-  -- Since we're in ZMod 2, this sum is always 0
-  sorry
 
 /-- The number of k-dimensional faces -/
 noncomputable def face_count (k : ℕ) : ℕ :=
@@ -191,28 +103,55 @@ noncomputable def KChainModule.boundary (k : ℤ) :
     KChainModule P k →ₗ[ZMod 2] KChainModule P (k - 1) where
   toFun := fun chain => fun G : KFace P (k - 1) =>
     Finset.univ.sum fun F : KFace P k =>
-      if Face.incident P F.toFace G.toFace then chain F else 0
+      if Face.incident F.toFace G.toFace then chain F else 0
   map_add' := fun x y => by
     funext G
     simp only [Pi.add_apply]
     have : ∀ F : KFace P k,
-      (if Face.incident P F.toFace G.toFace then (x + y) F else 0) =
-      (if Face.incident P F.toFace G.toFace then x F else 0) +
-      (if Face.incident P F.toFace G.toFace then y F else 0) := by
+      (if Face.incident F.toFace G.toFace then (x + y) F else 0) =
+      (if Face.incident F.toFace G.toFace then x F else 0) +
+      (if Face.incident F.toFace G.toFace then y F else 0) := by
       intro F
-      by_cases h : Face.incident P F.toFace G.toFace <;> simp [h]
+      by_cases h : Face.incident F.toFace G.toFace <;> simp [h]
     simp_rw [this]
     exact Finset.sum_add_distrib
   map_smul' := fun r x => by
     funext G
     simp only [RingHom.id_apply]
     have : ∀ F : KFace P k,
-      (if Face.incident P F.toFace G.toFace then (r • x) F else 0) =
-      r • (if Face.incident P F.toFace G.toFace then x F else 0) := by
+      (if Face.incident F.toFace G.toFace then (r • x) F else 0) =
+      r • (if Face.incident F.toFace G.toFace then x F else 0) := by
       intro F
-      by_cases h : Face.incident P F.toFace G.toFace <;> simp [h, Pi.smul_apply, smul_eq_mul]
+      by_cases h : Face.incident F.toFace G.toFace <;> simp [h, Pi.smul_apply, smul_eq_mul]
     simp_rw [this]
     exact Finset.smul_sum.symm
+
+/-- The incidence filter using the new type: intermediate (k-1)-faces between
+    a k-face F and (k-2)-face H -/
+noncomputable def KFace.incidenceFilter {k : ℤ} (F : KFace P k) (H : KFace P (k - 2)) :
+    Finset (KFace P (k - 1)) :=
+  Finset.univ.filter fun G : KFace P (k - 1) =>
+    Face.contains H.toFace G.toFace ∧ Face.contains G.toFace F.toFace
+
+/-- The Diamond Property: For any k-face F and (k-2)-face H
+    where H ⊆ F, there are exactly 2 intermediate (k-1)-faces -/
+theorem KFace.diamond_property {k : ℤ} (F : KFace P k) (H : KFace P (k - 2))
+    (h_subset : H.carrier ⊆ F.carrier) :
+    (KFace.incidenceFilter F H).card = 2 := by
+  sorry
+
+/-- Main theorem with the cleaner type: ∂² = 0 -/
+theorem KChainModule.boundary_squared (k : ℤ) :
+    KChainModule.boundary P (k - 1) ∘ₗ KChainModule.boundary P k = 0 := by
+  ext c : 1
+  funext H  -- H : KFace P (k - 2)
+  simp only [LinearMap.comp_apply, LinearMap.zero_apply]
+
+  -- The coefficient of H in ∂²(c) counts paths F → G → H
+  -- where F is a k-face, G is a (k-1)-face, H is a (k-2)-face
+  -- By the Diamond property, each pair (F, H) with H ⊆ F has exactly 2 intermediate G's
+  -- Since we're in ZMod 2, this sum is always 0
+  sorry
 
 /-- The module of k-chains (formal sums of k-faces) over ZMod 2
     (Legacy version for compatibility) -/
@@ -252,12 +191,6 @@ noncomputable def incidence (F G : Set E) (hF : IsFace P F) (hG : IsFace P G) : 
 noncomputable def incidenceCoeff (F G : Set E) (hF : IsFace P F) (hG : IsFace P G) : ZMod 2 :=
   if incidence P F G hF hG then 1 else 0
 
-/-- The incidence filter using the new type: intermediate (k-1)-faces between
-    a k-face F and (k-2)-face H -/
-noncomputable def KFace.incidenceFilter {k : ℤ} (F : KFace P k) (H : KFace P (k - 2)) :
-    Finset (KFace P (k - 1)) :=
-  Finset.univ.filter fun G : KFace P (k - 1) =>
-    Face.contains P H.toFace G.toFace ∧ Face.contains P G.toFace F.toFace
 
 /-- The incidence filter: given a k-face F and (k-2)-face H, this is the set of
     (k-1)-faces G that are incident to both F and H. In other words, these are
