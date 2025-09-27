@@ -129,6 +129,16 @@ noncomputable def incidence (F G : Set E) (hF : IsFace P F) (hG : IsFace P G) : 
 noncomputable def incidenceCoeff (F G : Set E) (hF : IsFace P F) (hG : IsFace P G) : ZMod 2 :=
   if incidence P F G hF hG then 1 else 0
 
+/-- The incidence filter: given a k-face F and (k-2)-face H, this is the set of
+    (k-1)-faces G that are incident to both F and H. In other words, these are
+    the intermediate faces G such that H ⊆ G ⊆ F with consecutive dimensions. -/
+noncomputable def incidenceFilter (F : Set E) (H : Set E)
+    (hF : IsFace P F) (hH : IsFace P H) (k : ℤ)
+    [Fintype {G : Set E // G ∈ faces_dim P (k - 1)}] :
+    Finset {G : Set E // G ∈ faces_dim P (k - 1)} :=
+  Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+    incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH
+
 /-- The boundary operator ∂_k : C_k → C_{k-1} for the chain complex -/
 -- For a formal sum of k-faces, compute the formal sum of their (k-1)-dimensional boundary faces
 -- The key property is that ∂² = 0, which follows from the fact that each (k-2)-face
@@ -218,14 +228,13 @@ lemma face_interval_card (F : Set E) (H : Set E) (hF : IsFace P F) (hH : IsFace 
         ∃ hG : IsFace P G, faceDim P G hG = faceDim P H hH + 1) :=
   sorry
 
-/-- Helper: The incidence filter counts exactly the intermediate faces from Diamond property -/
-lemma incidence_filter_eq_two (F : Set E) (H : Set E)
+/-- The incidence filter between a k-face F and (k-2)-face H has exactly 2 elements -/
+lemma incidenceFilter_card_eq_two (F : Set E) (H : Set E)
     (hF : IsFace P F) (hH : IsFace P H)
     (k : ℤ) [Fintype {G : Set E // G ∈ faces_dim P (k - 1)}]
     (hF_dim : (faceDim P F hF : ℤ) = k) (hH_dim : (faceDim P H hH : ℤ) = k - 2)
     (h_subset : H ⊆ F) :
-    (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
-      incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH).card = 2 := by
+    (incidenceFilter P F H hF hH k).card = 2 := by
   -- Derive h_codim from the dimension hypotheses
   have h_codim : faceDim P H hH + 2 = faceDim P F hF := by
     have : (faceDim P H hH : ℤ) + 2 = (faceDim P F hF : ℤ) := by
@@ -241,8 +250,10 @@ lemma incidence_filter_eq_two (F : Set E) (H : Set E)
   -- First, show that G is in our filter iff G.1 is in intermediate
 
   have filter_eq_intermediate : ∀ G : {G : Set E // G ∈ faces_dim P (k - 1)},
-      (incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH) ↔ G.1 ∈ intermediate := by
+      G ∈ incidenceFilter P F H hF hH k ↔ G.1 ∈ intermediate := by
     intro G
+    unfold incidenceFilter
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
     constructor
     · -- If G satisfies incidence conditions, then G.1 is in intermediate
       intro ⟨hFG_inc, hGH_inc⟩
@@ -343,9 +354,8 @@ lemma incidence_filter_eq_two (F : Set E) (H : Set E)
   -- The filter contains exactly those G where G.1 ∈ intermediate
   -- Since intermediate has cardinality 2, so does our filter
 
-  -- First, let's identify the filtered set
-  let filtered := Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
-                    incidence P F G.1 hF G.2.1 ∧ incidence P G.1 H G.2.1 hH
+  -- Use our incidenceFilter definition
+  let filtered := incidenceFilter P F H hF hH k
 
   -- We need to show filtered.card = intermediate.card
   -- We'll do this by establishing a bijection
@@ -353,8 +363,7 @@ lemma incidence_filter_eq_two (F : Set E) (H : Set E)
   -- Define the map from filtered to intermediate
   have map_to_inter : ∀ G ∈ filtered, G.1 ∈ intermediate := by
     intro G hG
-    rw [Finset.mem_filter] at hG
-    exact (filter_eq_intermediate G).mp hG.2
+    exact (filter_eq_intermediate G).mp hG
 
   -- For surjectivity, we need every element of intermediate to come from some G in filtered
   have surj : ∀ x ∈ intermediate, ∃ G ∈ filtered, G.1 = x := by
@@ -378,8 +387,10 @@ lemma incidence_filter_eq_two (F : Set E) (H : Set E)
 
     use ⟨x, hx_mem⟩
     constructor
-    · rw [Finset.mem_filter]
-      exact ⟨Finset.mem_univ _, (filter_eq_intermediate ⟨x, hx_mem⟩).mpr hx⟩
+    · -- Show ⟨x, hx_mem⟩ ∈ filtered
+      have h_in_filter : ⟨x, hx_mem⟩ ∈ incidenceFilter P F H hF hH k :=
+        (filter_eq_intermediate ⟨x, hx_mem⟩).mpr hx
+      exact h_in_filter
     · rfl
 
   -- Now we establish a bijection to show filtered.card = intermediate.card = 2
@@ -404,8 +415,7 @@ lemma intermediate_face_count_zero_or_two (k : ℤ)
     (F : {F : Set E // F ∈ faces_dim P k})
     (H : Set E) (hH' : H ∈ faces_dim P (k - 2)) :
     ∃ n : ℕ, n ∈ ({0, 2} : Set ℕ) ∧
-      (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
-        incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H G.2.1 hH'.1).card = n := by
+      (incidenceFilter P F.1 H F.2.1 hH'.1 k).card = n := by
   -- Extract face proofs from membership in faces_dim
   have hF_face : IsFace P F.1 := F.2.1
   have hH_face : IsFace P H := hH'.1
@@ -423,12 +433,13 @@ lemma intermediate_face_count_zero_or_two (k : ℤ)
 
     -- Apply the helper lemma directly
     use 2, Or.inr rfl
-    exact incidence_filter_eq_two P F.1 H hF_face hH_face k hF_dim hH_dim h_subset
+    exact incidenceFilter_card_eq_two P F.1 H hF_face hH_face k hF_dim hH_dim h_subset
 
   · -- H ⊄ F: no intermediate faces
     use 0, Or.inl rfl
 
     -- If H ⊄ F, there can't be any G with H ⊆ G ⊆ F
+    unfold incidenceFilter
     simp only [Finset.card_eq_zero]
     apply Finset.ext
     intro G
@@ -457,8 +468,7 @@ lemma boundary_double_sum_rearranged (k : ℤ)
           if incidence P F.1 G.1 F.2.1 G.2.1 then c F else 0)
       else 0) =
     (Finset.univ.sum fun F : {F : Set E // F ∈ faces_dim P k} =>
-      c F • (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
-        incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H.1 G.2.1 H.2.1).card : ZMod 2) := by
+      c F • (incidenceFilter P F.1 H.1 F.2.1 H.2.1 k).card : ZMod 2) := by
   -- This is a standard double sum rearrangement
   -- We interchange the order of summation and collect terms
   -- The key observation: we can rewrite the double sum as a sum over pairs (F, G)
@@ -711,7 +721,15 @@ lemma boundary_comp_boundary (k : ℤ)
 
   -- Apply the lemma showing the count is either 0 or 2
   obtain ⟨n, hn_mem, hn_eq⟩ := intermediate_face_count_zero_or_two P k F H hH'
-  rw [hn_eq]
+
+  -- The incidenceFilter is exactly the filter in our goal
+  have filter_eq : (Finset.univ.filter fun G : {G : Set E // G ∈ faces_dim P (k - 1)} =>
+                     incidence P F.1 G.1 F.2.1 G.2.1 ∧ incidence P G.1 H G.2.1 hH'.1).card =
+                   (incidenceFilter P F.1 H F.2.1 hH'.1 k).card := by
+    unfold incidenceFilter
+    rfl
+
+  rw [filter_eq, hn_eq]
 
   -- Both 0 and 2 give 0 in ZMod 2
   rcases hn_mem with rfl | rfl
