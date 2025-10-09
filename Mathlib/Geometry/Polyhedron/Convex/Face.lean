@@ -100,12 +100,8 @@ structure KFace (k : ℤ) extends Face P where
   /-- Proof that the dimension equals k -/
   dim_eq : (toFace.dim : ℤ) = k
 
-/-- Coercion from KFace to Face -/
-instance {k : ℤ} : Coe (KFace P k) (Face P) where
-  coe F := F.toFace
-
 /-- Coercion from KFace to Set E -/
-instance {k : ℤ} : CoeOut (KFace P k) (Set E) where
+instance (k : ℤ) : CoeOut (KFace P k) (Set E) where
   coe F := F.carrier
 
 /-- The type of k-faces is finite for each k -/
@@ -124,7 +120,6 @@ lemma kface_iff_mem_faces_dim (k : ℤ) (F : Set E) :
     exact ⟨kF.is_face, kF.is_face, kF.dim_eq⟩
   · intro ⟨hF, _, hdim⟩
     use ⟨⟨F, hF⟩, hdim⟩
-    rfl
 
 /-- Incidence between faces using the type-based approach -/
 def Face.incident (F G : Face P) : Prop :=
