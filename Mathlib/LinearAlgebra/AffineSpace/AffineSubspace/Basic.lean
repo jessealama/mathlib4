@@ -171,12 +171,8 @@ theorem eq_univ_of_subsingleton_span_eq_top {s : Set P} (h₁ : s.Subsingleton)
 
 /-- A proper affine subspace does not contain all points. -/
 lemma exists_not_mem_of_ne_top (S : AffineSubspace k P) (h : S ≠ ⊤) :
-    ∃ p : P, p ∉ S := by
-  have h_ne_univ : (S : Set P) ≠ Set.univ := by
-    intro h_eq
-    have h_top : S = ⊤ := SetLike.coe_injective h_eq
-    exact h h_top
-  exact (Set.ne_univ_iff_exists_notMem (S : Set P)).mp h_ne_univ
+    ∃ p : P, p ∉ S :=
+  SetLike.exists_not_mem_of_ne_top S h
 
 /-- If one nonempty affine subspace is less than another, the same applies to their directions -/
 theorem direction_lt_of_nonempty {s₁ s₂ : AffineSubspace k P} (h : s₁ < s₂)
