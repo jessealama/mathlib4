@@ -915,9 +915,9 @@ theorem AffineIndependent.exists_affineEquiv
       exact IsEmpty.elim h_empty i
     · rw [not_isEmpty_iff] at h_empty
       have h_card_lt : Fintype.card ι < Module.finrank k V + 1 := by omega
-      obtain ⟨p_f, hp_f⟩ := AffineSubspace.exists_not_mem_of_ne_top _
+      obtain ⟨p_f, hp_f⟩ := SetLike.exists_not_mem_of_ne_top _
         (hf.affineSpan_ne_top_of_card_lt_finrank_add_one h_card_lt)
-      obtain ⟨p_g, hp_g⟩ := AffineSubspace.exists_not_mem_of_ne_top _
+      obtain ⟨p_g, hp_g⟩ := SetLike.exists_not_mem_of_ne_top _
         (hg.affineSpan_ne_top_of_card_lt_finrank_add_one h_card_lt)
       let f' : Option ι → P := fun o => o.elim p_f f
       let g' : Option ι → P := fun o => o.elim p_g g
